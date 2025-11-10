@@ -3,17 +3,26 @@ import { createGlobalStyle } from 'styled-components';
 const GlobalStyle = createGlobalStyle`
   /* CSS 변수를 사용하여 테마 색상 정의 */
   :root {
-    --primary-color: #61dafb;
-    --background-color: #282c34;
-    --text-color: #ffffff;
-    --secondary-text-color: #cccccc;
+    --primary-color: #0070f3; /* 헤더 링크 호버 색상으로 변경 */
+    --background-color: #ffffff; /* 흰색 배경으로 변경 */
+    --text-color: #333333; /* 기본 텍스트 색상 변경 */
+    --secondary-text-color: #555555; /* 보조 텍스트 색상 변경 */
   }
 
-  /* 기본적인 CSS 리셋 */
   * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+  }
+
+  html, body, #root {
+    height: 100%;
+    width: 100%;
+  }
+
+  #root {
+    display: flex;
+    flex-direction: column;
   }
 
   body {
