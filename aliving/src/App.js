@@ -5,6 +5,8 @@ import GlobalStyle from './GlobalStyle';
 import HomePage from './page/home';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
+import UserDongPage from './page/userDong';
+import AdminDongPage from './page/adminDong';
 
 function App() {
   return (
@@ -15,6 +17,8 @@ function App() {
         <Main>
           <Routes>
             <Route path="/" element={<HomePage />} />
+            <Route path="/dong/:dongName" element={<UserDongPage />} />
+            <Route path="/admin/dong/:dongName" element={<AdminDongPage />} />
           </Routes>
         </Main>
         <Footer />
