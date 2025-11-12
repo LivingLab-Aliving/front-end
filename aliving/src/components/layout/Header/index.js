@@ -1,16 +1,32 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
 import { ReactComponent as LogoSvg } from '../../../assets/logo.svg';
 
 
 const Header = () => {
+    // 임시 확인용
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const username = '홍길동';
+
+    const handleLogin = () => setIsLoggedIn(true);
+    const handleLogout = () => setIsLoggedIn(false);
+
     return (
         <HeaderContainer>
             <Logo href="/"><LogoSvg /></Logo>
 
             <NavLinks>
-                <Button>로그인</Button>
-                <Button>회원가입</Button>
+                {isLoggedIn ? (
+                    <>
+                        <UserName>{username}님</UserName>
+                        <Button onClick={handleLogout}>로그아웃</Button>
+                    </>
+                ) : (
+                    <>
+                        <Button onClick={handleLogin}>로그인</Button>
+                        <Button>회원가입</Button>
+                    </>
+                )}
             </NavLinks>
         </HeaderContainer>
     );
@@ -42,6 +58,12 @@ const Text = styled.span`
   font-size: 1rem;
   color: #555;
   margin-left: 1rem;
+`;
+
+const UserName = styled.span`
+  display: flex;
+  align-items: center;
+  font-weight: bold;
 `;
 
 const NavLinks = styled.nav`

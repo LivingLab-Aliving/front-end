@@ -1,14 +1,29 @@
-import React from "react";
+import React, { useState } from "react";
 import styled from "styled-components";
+import { useNavigate } from "react-router-dom";
 import { ReactComponent as CharacterIllustration } from "../../assets/character.svg";
 
 const DONG_GROUPS = [
-  ["진잠동", "원신흥동", "온천1동", "온천2동"],
-  ["노은1동", "노은2동", "노은3동"],
-  ["신성동", "전민동", "구즉동", "관평동"],
+  ["진잠동", "학하동", "상대동", "원신흥동"],
+  ["온천1동", "온천2동", "노은1동", "노은2동"],
+  ["노은3동", "신성동", "전민동", "구즉동", "관평동"],
 ];
 
 const HomePage = () => {
+  const navigate = useNavigate();
+
+  // --- 임시 상태 ---
+  const [isLoggedIn] = useState(true); // 로그인 상태
+
+  const handleDongClick = (dongName) => {
+    if (!isLoggedIn) {
+      alert("로그인이 필요합니다.");
+      return;
+    }
+
+    navigate(`/dong/${dongName}`);
+  };
+
   return (
     <HomeContainer>
       <Inner>
@@ -35,7 +50,13 @@ const HomePage = () => {
           {DONG_GROUPS.map((dongGroup, index) => (
             <DongRow key={index}>
               {dongGroup.map((dongName) => (
-                <DongButton key={dongName}>{dongName}</DongButton>
+                <DongButton
+                  key={dongName}
+                  type="button"
+                  onClick={() => handleDongClick(dongName)}
+                >
+                  {dongName}
+                </DongButton>
               ))}
             </DongRow>
           ))}
