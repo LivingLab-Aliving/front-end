@@ -6,6 +6,7 @@ import HomePage from "./page/home";
 import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
 import UserDongPage from "./page/userDong";
+import ProgramDetail from "./page/userDong/ProgramDetail";
 
 function App() {
   return (
@@ -17,6 +18,10 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/dong/:dongName" element={<UserDongPage />} />
+            <Route
+              path="/dong/:dongName/program/:programId"
+              element={<ProgramDetail />}
+            />
           </Routes>
         </Main>
         <Footer />

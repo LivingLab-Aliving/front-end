@@ -12,6 +12,23 @@ export const PROGRAMS_BY_DONG = {
       startDate: "2025-09-01",
       endDate: "2025-12-22",
       schedule: "월요일 09:30~11:30",
+      targetAudience: "성인",
+      // 상세 페이지용 추가 데이터
+      quarter: "2025년 4분기",
+      applicationPeriod: "2025.08.24 ~ 2025.08.31",
+      capacity: "22명 / 25명",
+      materials: "개인 악기, 편한 복장",
+      institution: "관평동 / 대전광역시 유성구민",
+      instructor: {
+        name: "이서연 (Lee Seoyeon)",
+        role: "봄글씨공방 대표",
+        field: "수채 캘리그라피 기초, 색채 표현",
+        experience: "주민자치센터 강의 5년, 협회 정회원",
+      },
+      attachment: {
+        name: "수채캘리그라피_기초_강의계획서.pdf",
+        url: "#",
+      },
     },
     {
       id: "B-4",
@@ -23,6 +40,7 @@ export const PROGRAMS_BY_DONG = {
       startDate: "2025-09-01",
       endDate: "2025-12-22",
       schedule: "월요일 09:30~11:30",
+      targetAudience: "성인",
     },
     {
       id: "B-24",
@@ -34,6 +52,7 @@ export const PROGRAMS_BY_DONG = {
       startDate: "2025-09-01",
       endDate: "2025-12-22",
       schedule: "월요일 09:30~11:30",
+      targetAudience: "성인",
     },
     {
       id: "B-12",
@@ -45,6 +64,7 @@ export const PROGRAMS_BY_DONG = {
       startDate: "2025-09-02",
       endDate: "2025-12-23",
       schedule: "화요일 09:30~11:30",
+      targetAudience: "성인",
     },
     {
       id: "B-29",
@@ -56,6 +76,7 @@ export const PROGRAMS_BY_DONG = {
       startDate: "2025-09-03",
       endDate: "2025-12-24",
       schedule: "수요일 09:30~11:30",
+      targetAudience: "성인",
     },
     {
       id: "B-31",
@@ -67,6 +88,7 @@ export const PROGRAMS_BY_DONG = {
       startDate: "2025-09-04",
       endDate: "2025-12-26",
       schedule: "목요일 09:30~11:30",
+      targetAudience: "성인",
     },
     {
       id: "B-35",
@@ -78,6 +100,7 @@ export const PROGRAMS_BY_DONG = {
       startDate: "2025-09-05",
       endDate: "2025-11-28",
       schedule: "금요일 16:00~17:30",
+      targetAudience: "어린이",
     },
     {
       id: "B-39",
@@ -89,6 +112,7 @@ export const PROGRAMS_BY_DONG = {
       startDate: "2025-09-10",
       endDate: "2025-10-15",
       schedule: "수요일 14:00~16:00",
+      targetAudience: "시니어",
     },
     {
       id: "B-43",
@@ -100,6 +124,7 @@ export const PROGRAMS_BY_DONG = {
       startDate: "2025-09-07",
       endDate: "2025-11-09",
       schedule: "토요일 10:00~12:00",
+      targetAudience: "어린이",
     },
     {
       id: "B-45",
@@ -111,6 +136,7 @@ export const PROGRAMS_BY_DONG = {
       startDate: "2025-09-09",
       endDate: "2025-11-04",
       schedule: "화요일 14:00~16:30",
+      targetAudience: "성인",
     },
     {
       id: "B-48",
@@ -122,6 +148,7 @@ export const PROGRAMS_BY_DONG = {
       startDate: "2025-09-11",
       endDate: "2025-12-11",
       schedule: "목요일 19:00~21:00",
+      targetAudience: "성인",
     },
     {
       id: "B-52",
@@ -133,11 +160,39 @@ export const PROGRAMS_BY_DONG = {
       startDate: "2025-09-08",
       endDate: "2025-12-01",
       schedule: "월요일 19:00~20:30",
+      targetAudience: "성인",
     },
   ],
 };
 
 export const PROGRAM_TYPES = ["유성형 프로그램", "자치형 프로그램"];
-export const TARGET_AUDIENCE_OPTIONS = ["전체", "성인", "청소년", "어린이", "시니어"];
+export const TARGET_AUDIENCE_OPTIONS = [
+  "전체",
+  "성인",
+  "청소년",
+  "어린이",
+  "시니어",
+];
 export const TUITION_OPTIONS = ["전체", "무료", "유료"];
 
+// 공통 안내 문구
+export const PAYMENT_GUIDE = [
+  "수강료외 부대비용 25.10.01 ~ 25.12.31",
+  "선정자 수강료 납부기간 25.09.08 ~ 25.09.19",
+  "방문신청 및 온라인 신청 동시 접수 받습니다. (신청시작 시간: 오전10시)",
+  "석봉동주민 우선 선정입니다.",
+  "수강료 : 39,000원 / 입금 시 프로그램명+입금자명 표기 (예: 과목+이름 - 라인김주민 또는 김주민라인 등), (재료비,교재비는 개강후 강사에게 납부)",
+  "수강료 입금 계좌 : MG새마을금고 9002-1990-9304-7(석봉동주민자치회)",
+  "납부기간 : 접수일 후 3일 이내",
+  "납부기간 내 미납일 경우 다음 수강생에게 수강기회가 주어질 수 있으니 수강을 원하실 경우 기간내 완납해주시기 부탁드립니다.",
+  "수강료 100% 감면 대상자(국가유공자, 기초생활수급권자, 한부모가족보호대상자, 다문화가족지원법에 따른 결혼이민자, 미성년의 두자녀 부모, 장애정도가 심한 장애인 등)",
+  "수강료 50% 감면 대상자(경로우대 만65세이상자, 장애정도가 심하지 않은 장애인)",
+  "수강료 무료,감면 대상자 : 신청서 작성 필수. 증빙서류 필수 제출",
+  "문의전화 : 석봉동주민자치회 042)608-4801, 4802",
+];
+
+export const ETC_GUIDE = [
+  "프로그램 운영 장소, 요일, 시간은 변동될 수 있습니다.",
+  "프로그램에 따라 재료비, 교재비 등이 발생할 수 있습니다.(자부담)",
+  "첨부된 공고문을 반드시 확인하시어 수강생 유의사항 등을 숙지해 주시기 바랍니다.",
+];
