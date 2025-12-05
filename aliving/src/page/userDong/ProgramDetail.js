@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { ReactComponent as ArrowLeft } from "../../assets/icon/arrow_left.svg";
@@ -9,6 +9,7 @@ import { formatPeriod, calculateDaysRemaining } from "./utils";
 const ProgramDetail = () => {
   const { dongName, programId } = useParams();
   const navigate = useNavigate();
+  const [showModal, setShowModal] = useState(false);
 
   const program = useMemo(() => {
     const dongPrograms = PROGRAMS_BY_DONG[dongName] || [];
@@ -81,7 +82,9 @@ const ProgramDetail = () => {
                 </TableRow>
                 <TableRow>
                   <TableHeader>신청인원 / 모집인원</TableHeader>
-                  <TableData>{program.capacity || program.recruitment}</TableData>
+                  <TableData>
+                    {program.capacity || program.recruitment}
+                  </TableData>
                 </TableRow>
                 <TableRow>
                   <TableHeader>교육대상</TableHeader>
@@ -105,9 +108,7 @@ const ProgramDetail = () => {
         </InfoGrid>
 
         <ButtonWrapper>
-          <ListButton onClick={() => navigate(`/dong/${dongName}`)}>
-            목록으로
-          </ListButton>
+          <ApplyButton onClick={() => setShowModal(true)}>신청하기</ApplyButton>
         </ButtonWrapper>
       </ContentSection>
 
@@ -160,10 +161,16 @@ const ProgramDetail = () => {
         <GuideList>
           {program.paymentGuide
             ? program.paymentGuide.map((line, index) => (
-                <GuideItem key={index}>★ {line}</GuideItem>
+                <GuideItem key={index}>
+                  <Star>★</Star>
+                  <Text>{line}</Text>
+                </GuideItem>
               ))
             : PAYMENT_GUIDE.map((line, index) => (
-                <GuideItem key={index}>★ {line}</GuideItem>
+                <GuideItem key={index}>
+                  <Star>★</Star>
+                  <Text>{line}</Text>
+                </GuideItem>
               ))}
         </GuideList>
       </Section>
@@ -184,6 +191,33 @@ const ProgramDetail = () => {
               ))}
         </GuideList>
       </Section>
+
+      {showModal && (
+        <ModalOverlay onClick={() => setShowModal(false)}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalIcon>
+              <CloseIcon>✕</CloseIcon>
+            </ModalIcon>
+            <RightSection>
+              <ModalText>
+                <ModalTitle>해당 프로그램을 신청할 수 없습니다.</ModalTitle>
+                <ModalBody>
+                  <p>
+                    회원님은 이미 최대 신청 가능한 프로그램 수(2개)에
+                    도달했습니다.
+                  </p>
+                  <p>
+                    공정한 참여를 위해 1인당 2개의 프로그램만 신청이 가능합니다.
+                  </p>
+                </ModalBody>
+              </ModalText>
+              <ModalButton onClick={() => setShowModal(false)}>
+                닫기
+              </ModalButton>
+            </RightSection>
+          </ModalContent>
+        </ModalOverlay>
+      )}
     </Container>
   );
 };
@@ -230,7 +264,7 @@ const Title = styled.h1`
 const Divider = styled.div`
   width: 100%;
   height: 1px;
-  background: ${({ $thin }) => ($thin ? "#e0e0e0" : "#ddd")};
+  background: ${({ $thin }) => ($thin ? "#e0e0e0" : "#9DA4AE")};
   margin: 0;
 `;
 
@@ -247,14 +281,20 @@ const ProgramHeader = styled.div`
 `;
 
 const StatusBadge = styled.span`
-  color: ${({ $type }) => ($type === "closed" ? "#999" : "#00a0e9")};
+  display: inline-block;
+  padding: 8px 20px;
+  background: ${({ $type }) => ($type === "closed" ? "#ECECEC" : "#E5F7FF")};
+  color: ${({ $type }) => ($type === "closed" ? "#9D9D9C" : "#006B97")};
   font-weight: 700;
-  font-size: 18px;
+  font-size: 16px;
+  border-radius: 50px;
+  line-height: 1.2;
+  white-space: nowrap;
 `;
 
 const ProgramName = styled.h2`
   font-size: 24px;
-  font-weight: 700;
+  font-weight: 500;
   color: #111;
 `;
 
@@ -302,7 +342,7 @@ const TableRow = styled.tr`
 const TableHeader = styled.th`
   padding: 16px 24px;
   text-align: center;
-  background: #fff;
+  background: #f5f6f9;
   color: #333;
   font-weight: 500;
   font-size: 14px;
@@ -324,9 +364,9 @@ const ButtonWrapper = styled.div`
   margin-top: 40px;
 `;
 
-const ListButton = styled.button`
+const ApplyButton = styled.button`
   padding: 13px 60px;
-  background: #1a5cc8;
+  background: #1557b7;
   color: white;
   border: none;
   font-size: 15px;
@@ -334,6 +374,110 @@ const ListButton = styled.button`
   cursor: pointer;
   border-radius: 2px;
   transition: background 0.2s;
+
+  &:hover {
+    background: #154ba3;
+  }
+`;
+
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+`;
+
+const ModalContent = styled.div`
+  background: white;
+  border-radius: 16px;
+  padding: 40px;
+  max-width: 640px;
+  width: 90%;
+  display: flex;
+  gap: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  position: relative;
+  align-items: flex-start;
+`;
+
+const ModalIcon = styled.div`
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #ff553f; /* 시안의 주황빛 도는 빨강 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+`;
+
+const RightSection = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const CloseIcon = styled.span`
+  color: white;
+  font-size: 36px;
+  font-weight: 300; /* 얇은 두께 */
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  margin-top: -4px; /* 시각적 중앙 보정 */
+`;
+
+const ModalText = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-right: 10px;
+  padding-top: 10px; /* 아이콘과 높이 맞춤 */
+`;
+
+const ModalTitle = styled.h3`
+  font-size: 22px;
+  font-weight: 800; /* 매우 굵게 */
+  color: #000;
+  margin: 0;
+  line-height: 1.2;
+`;
+
+const ModalBody = styled.div`
+  font-size: 16px;
+  color: #555;
+  line-height: 1.5;
+  letter-spacing: -0.3px;
+
+  p {
+    margin: 0;
+    white-space: nowrap;
+  }
+`;
+
+const ModalButton = styled.button`
+  align-self: flex-end; /* flex 컨테이너 내에서 우측 정렬 */
+  min-width: 100px;
+  padding: 12px 36px;
+  background: #1a5cc8; /* 시안의 진한 파랑 */
+  color: white;
+  border: none;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.2s;
+  margin-top: 30px; /* 본문과의 간격 */
 
   &:hover {
     background: #154ba3;
@@ -469,15 +613,40 @@ const GuideList = styled.ul`
   display: flex;
   flex-direction: column;
   gap: 10px;
+  padding-left: 0;
 `;
 
 const GuideItem = styled.li`
   font-size: 14px;
   color: #555;
   line-height: 1.6;
-  padding-left: ${({ $plain }) => ($plain ? "0" : "0")};
-  text-indent: ${({ $plain }) => ($plain ? "0" : "0")};
   list-style: none;
+  display: ${({ $plain }) => ($plain ? "block" : "flex")};
+  align-items: flex-start;
+  gap: 0;
+  ${({ $plain }) =>
+    !$plain &&
+    `
+    & > span:first-child {
+      width: 0.4em;
+      flex-shrink: 0;
+      text-align: right;
+      overflow: visible;
+      position: relative;
+      left: 1em;
+    }
+  `}
+`;
+
+const Star = styled.span``;
+
+const Text = styled.span`
+  ${({ $plain }) =>
+    !$plain &&
+    `
+    flex: 1;
+    margin-left: 2em;
+  `}
 `;
 
 const ErrorTitle = styled.h2`
