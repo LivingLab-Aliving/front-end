@@ -13,6 +13,8 @@ const DongPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedType, setSelectedType] = useState('전체');
   const [selectedStatus, setSelectedStatus] = useState('전체');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('');
   const itemsPerPage = 6;
 
   // 프로그램 목록 설정
@@ -23,9 +25,17 @@ const DongPage = () => {
     setCurrentPage(1);
   }, [dongName]);
 
-  // 필터링 로직
+  // 필터링 및 정렬 로직
   useEffect(() => {
     let filtered = [...programs];
+
+    // 검색 필터
+    if (searchQuery) {
+      filtered = filtered.filter(p => 
+        p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.instructor?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
 
     // 프로그램 타입 필터
     if (selectedType !== '전체') {
@@ -42,9 +52,32 @@ const DongPage = () => {
       });
     }
 
+    // 정렬
+    if (sortBy === 'status-asc') {
+      filtered.sort((a, b) => {
+        const statusA = calculateDaysRemaining(a.startDate, a.endDate);
+        const statusB = calculateDaysRemaining(b.startDate, b.endDate);
+        if (statusA.type === 'closed' && statusB.type !== 'closed') return 1;
+        if (statusA.type !== 'closed' && statusB.type === 'closed') return -1;
+        return statusA.value - statusB.value;
+      });
+    } else if (sortBy === 'status-desc') {
+      filtered.sort((a, b) => {
+        const statusA = calculateDaysRemaining(a.startDate, a.endDate);
+        const statusB = calculateDaysRemaining(b.startDate, b.endDate);
+        if (statusA.type === 'closed' && statusB.type !== 'closed') return -1;
+        if (statusA.type !== 'closed' && statusB.type === 'closed') return 1;
+        return statusB.value - statusA.value;
+      });
+    } else if (sortBy === 'period-asc') {
+      filtered.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+    } else if (sortBy === 'period-desc') {
+      filtered.sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
+    }
+
     setFilteredPrograms(filtered);
     setCurrentPage(1);
-  }, [selectedType, selectedStatus, programs]);
+  }, [selectedType, selectedStatus, searchQuery, sortBy, programs]);
 
   const handleNewProgram = () => {
     navigate(`/admin/dong/${dongName}/add`);
@@ -89,6 +122,15 @@ const DongPage = () => {
                 <option value="마감">마감</option>
               </Select>
             </FilterGroup>
+            <SearchGroup>
+              <FilterLabel>검색</FilterLabel>
+              <SearchInput
+                type="text"
+                placeholder="프로그램명 또는 담당자"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </SearchGroup>
           </FilterSection>
           <AddButton onClick={handleNewProgram}>+ 새 프로그램 추가</AddButton>
         </HeaderSection>
@@ -98,11 +140,21 @@ const DongPage = () => {
             <Table>
               <thead>
                 <TableRow>
-                  <TableHeader>모집상태</TableHeader>
+                  <TableHeader>
+                    모집상태
+                    <SortButton onClick={() => setSortBy(sortBy === 'status-asc' ? 'status-desc' : 'status-asc')}>
+                      {sortBy === 'status-asc' ? '↑' : sortBy === 'status-desc' ? '↓' : '↕'}
+                    </SortButton>
+                  </TableHeader>
                   <TableHeader>프로그램명</TableHeader>
                   <TableHeader>분기</TableHeader>
                   <TableHeader>교육기간</TableHeader>
-                  <TableHeader>모집기간</TableHeader>
+                  <TableHeader>
+                    모집기간
+                    <SortButton onClick={() => setSortBy(sortBy === 'period-asc' ? 'period-desc' : 'period-asc')}>
+                      {sortBy === 'period-asc' ? '↑' : sortBy === 'period-desc' ? '↓' : '↕'}
+                    </SortButton>
+                  </TableHeader>
                   <TableHeader>이미지</TableHeader>
                   <TableHeader>분류</TableHeader>
                   <TableHeader>담당자</TableHeader>
@@ -179,13 +231,37 @@ const Container = styled.div`
   align-items: center;
   flex: 1;
   padding: 0 24px 80px;
-  gap: 32px;
+  gap: 24px;
   width: 100%;
+`;
+
+const SearchGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  max-width: 400px;
+`;
+
+const SearchInput = styled.input`
+  padding: 8px 12px;
+  font-size: 0.95rem;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  
+  &:focus {
+    outline: none;
+    border-color: #1976d2;
+  }
+  
+  &::placeholder {
+    color: #999;
+  }
 `;
 
 const HeaderSection = styled.div`
   width: 100%;
-  max-width: 1200px;
+  max-width: 1400px;
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
@@ -284,6 +360,21 @@ const TableHeader = styled.th`
   background-color: #f5f5f5;
   border-bottom: 2px solid #ddd;
   white-space: nowrap;
+  position: relative;
+`;
+
+const SortButton = styled.button`
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin-left: 4px;
+  padding: 2px 4px;
+  
+  &:hover {
+    color: #1976d2;
+  }
 `;
 
 const TableCell = styled.td`
