@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import UnknownImage from "../../assets/unknown_image.svg";
 import { ReactComponent as ShareIcon } from "../../assets/icon/share.svg";
@@ -17,6 +17,7 @@ import { formatPeriod, calculateDaysRemaining } from "./utils";
 
 const UserDongPage = () => {
   const { dongName } = useParams();
+  const navigate = useNavigate();
   const [keyword, setKeyword] = useState("");
   const [programType, setProgramType] = useState("유성형 프로그램");
   const [targetAudience, setTargetAudience] = useState("전체");
@@ -203,7 +204,10 @@ const UserDongPage = () => {
                 program.endDate
               );
               return (
-                <ProgramItem key={program.id}>
+                <ProgramItem
+                  key={program.id}
+                  onClick={() => navigate(`/dong/${dongName}/program/${program.id}`)}
+                >
                   <ImageWrapper>
                     <ProgramImage
                       src={UnknownImage}
@@ -473,6 +477,12 @@ const ProgramItem = styled.li`
   background: #fff;
   align-items: flex-start;
   width: 100%;
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: #f9f9f9;
+  }
 
   @media (max-width: 640px) {
     flex-direction: column;
