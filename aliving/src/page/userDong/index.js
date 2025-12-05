@@ -12,8 +12,8 @@ import {
   PROGRAM_TYPES,
   TARGET_AUDIENCE_OPTIONS,
   TUITION_OPTIONS,
-} from "./data";
-import { formatPeriod, calculateDaysRemaining } from "./utils";
+} from "../../assets/data/data";
+import { formatPeriod, calculateDaysRemaining } from "../../util/utils";
 
 const UserDongPage = () => {
   const { dongName } = useParams();

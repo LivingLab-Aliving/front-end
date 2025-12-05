@@ -73,19 +73,18 @@ const NavLinks = styled.nav`
 `;
 
 const Button = styled.button`
-  width: auto;
-  height: 2.5rem;
-  padding: 0.5rem 1rem;
+  border: 1px solid #b2b2b2;
+  border-radius: 10px;
+  padding: 10px 16px;
   background-color: #0070f3;
   color: white;
-  border: none;
-  border-radius: 5px;
-  font-size: 1rem;
+  font-size: 15px;
   font-weight: bold;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background-color 0.2s ease;
 
   &:hover {
     background-color: #005bb5;

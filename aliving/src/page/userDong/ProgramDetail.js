@@ -3,8 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { ReactComponent as ArrowLeft } from "../../assets/icon/arrow_left.svg";
 import UnknownImage from "../../assets/unknown_image.svg";
-import { PROGRAMS_BY_DONG, PAYMENT_GUIDE, ETC_GUIDE } from "./data";
-import { formatPeriod, calculateDaysRemaining } from "./utils";
+import { PROGRAMS_BY_DONG, PAYMENT_GUIDE, ETC_GUIDE } from "../../assets/data/data";
+import { formatPeriod, calculateDaysRemaining } from "../../util/utils";
 
 const ProgramDetail = () => {
   const { dongName, programId } = useParams();
