@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { ReactComponent as ArrowLeft } from "../../assets/icon/arrow_left.svg";
 import UnknownImage from "../../assets/unknown_image.svg";
@@ -197,7 +197,7 @@ const Container = styled.div`
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 32px;
 `;
 
 const Header = styled.header`
@@ -210,7 +210,7 @@ const BackButton = styled.button`
   background: none;
   border: none;
   cursor: pointer;
-  padding: 4px;
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -230,15 +230,14 @@ const Title = styled.h1`
 const Divider = styled.div`
   width: 100%;
   height: 1px;
-  background: ${({ $thin }) => ($thin ? "#e0e0e0" : "#111")};
-  margin: 8px 0;
+  background: ${({ $thin }) => ($thin ? "#e0e0e0" : "#ddd")};
+  margin: 0;
 `;
 
 const ContentSection = styled.div`
   display: flex;
   flex-direction: column;
   gap: 32px;
-  margin-bottom: 32px;
 `;
 
 const ProgramHeader = styled.div`
@@ -254,7 +253,7 @@ const StatusBadge = styled.span`
 `;
 
 const ProgramName = styled.h2`
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 700;
   color: #111;
 `;
@@ -264,18 +263,18 @@ const InfoGrid = styled.div`
   gap: 40px;
   align-items: flex-start;
 
-  @media (max-width: 768px) {
+  @media (max-width: 960px) {
     flex-direction: column;
   }
 `;
 
 const PosterWrapper = styled.div`
-  flex: 1;
+  flex: 0.8;
   max-width: 400px;
   width: 100%;
   aspect-ratio: 3 / 4;
   background: #f5f5f5;
-  border-radius: 8px;
+  border-radius: 0; /* 시안엔 라운드가 없는 듯 보임 */
   overflow: hidden;
 `;
 
@@ -286,14 +285,13 @@ const Poster = styled.img`
 `;
 
 const InfoTableWrapper = styled.div`
-  flex: 1.5;
+  flex: 1.2;
   width: 100%;
 `;
 
 const InfoTable = styled.table`
   width: 100%;
-  border-top: 2px solid #e0e0e0;
-  border-bottom: 1px solid #e0e0e0;
+  border-top: 1px solid #ddd;
   border-collapse: collapse;
 `;
 
@@ -302,18 +300,19 @@ const TableRow = styled.tr`
 `;
 
 const TableHeader = styled.th`
-  padding: 16px;
-  text-align: left;
-  background: #fcfcfc;
+  padding: 16px 24px;
+  text-align: center;
+  background: #fff;
   color: #333;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 14px;
   width: 140px;
-  vertical-align: top;
+  vertical-align: middle;
+  white-space: nowrap;
 `;
 
 const TableData = styled.td`
-  padding: 16px;
+  padding: 16px 24px;
   color: #333;
   font-size: 14px;
   line-height: 1.5;
@@ -322,18 +321,18 @@ const TableData = styled.td`
 const ButtonWrapper = styled.div`
   display: flex;
   justify-content: center;
-  margin-top: 20px;
+  margin-top: 40px;
 `;
 
 const ListButton = styled.button`
-  padding: 12px 48px;
+  padding: 13px 60px;
   background: #1a5cc8;
   color: white;
   border: none;
   font-size: 15px;
   font-weight: 500;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 2px;
   transition: background 0.2s;
 
   &:hover {
@@ -344,8 +343,8 @@ const ListButton = styled.button`
 const Section = styled.section`
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  margin-top: 20px;
+  gap: 24px;
+  margin-top: 16px;
 `;
 
 const SectionTitle = styled.h3`
@@ -355,9 +354,7 @@ const SectionTitle = styled.h3`
 `;
 
 const SectionContent = styled.div`
-  background: #f9f9f9;
-  padding: 24px;
-  border-radius: 4px;
+  /* padding 없음 */
 `;
 
 const InstructorCard = styled.div`
@@ -365,6 +362,9 @@ const InstructorCard = styled.div`
   gap: 24px;
   position: relative;
   align-items: center;
+  background: #f8f9fa;
+  padding: 32px;
+  border-radius: 8px;
 
   @media (max-width: 640px) {
     flex-direction: column;
@@ -373,30 +373,31 @@ const InstructorCard = styled.div`
 `;
 
 const InstructorImage = styled.img`
-  width: 80px;
-  height: 80px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   object-fit: cover;
   background: #eee;
+  border: 1px solid #eee;
 `;
 
 const InstructorInfo = styled.div`
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 `;
 
 const InstructorNameRow = styled.div`
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
   margin-bottom: 4px;
 `;
 
 const InstructorName = styled.span`
   font-weight: 700;
-  font-size: 16px;
+  font-size: 15px;
   color: #111;
 `;
 
@@ -408,17 +409,17 @@ const InstructorRole = styled.span`
 const InstructorDetailRow = styled.div`
   display: flex;
   font-size: 14px;
-  color: #333;
+  color: #555;
   gap: 8px;
 `;
 
 const DetailLabel = styled.span`
   color: #888;
-  min-width: 70px;
+  min-width: 60px;
 `;
 
 const DetailValue = styled.span`
-  color: #333;
+  color: #555;
 `;
 
 const MoreLink = styled.a`
@@ -426,7 +427,7 @@ const MoreLink = styled.a`
   font-size: 13px;
   text-decoration: none;
   position: absolute;
-  right: 0;
+  right: 32px;
   top: 50%;
   transform: translateY(-50%);
 
@@ -443,36 +444,40 @@ const MoreLink = styled.a`
 `;
 
 const AttachmentBox = styled.div`
-  margin-top: 24px;
-  padding-top: 24px;
-  border-top: 1px solid #eee;
+  margin-top: 20px;
+  padding: 20px 24px;
+  background: #f8f9fa;
   font-size: 14px;
   color: #333;
+  display: flex;
+  align-items: center;
 
   span {
     font-weight: 600;
+    margin-right: 8px;
   }
 `;
 
 const DownloadLink = styled.a`
   text-decoration: underline;
   color: #111;
-  margin-left: 8px;
   cursor: pointer;
+  font-weight: 500;
 `;
 
 const GuideList = styled.ul`
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 `;
 
 const GuideItem = styled.li`
   font-size: 14px;
   color: #555;
   line-height: 1.6;
-  padding-left: ${({ $plain }) => ($plain ? "0" : "16px")};
-  text-indent: ${({ $plain }) => ($plain ? "0" : "-16px")};
+  padding-left: ${({ $plain }) => ($plain ? "0" : "0")};
+  text-indent: ${({ $plain }) => ($plain ? "0" : "0")};
+  list-style: none;
 `;
 
 const ErrorTitle = styled.h2`
@@ -480,4 +485,3 @@ const ErrorTitle = styled.h2`
   text-align: center;
   margin: 40px 0;
 `;
-
