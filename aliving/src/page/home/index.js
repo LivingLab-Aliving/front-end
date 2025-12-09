@@ -14,14 +14,20 @@ const HomePage = () => {
 
   // --- 임시 상태 ---
   const [isLoggedIn] = useState(true); // 로그인 상태
+  const [isAdmin] = useState(true);       // 관리자 여부
 
   const handleDongClick = (dongName) => {
     if (!isLoggedIn) {
       alert("로그인이 필요합니다.");
       return;
     }
-
-    navigate(`/dong/${dongName}`);
+    
+    if (!isAdmin) { // 일반 사용자인 경우
+      navigate(`/dong/${dongName}`);
+      return;
+    }
+    // 관리자인 경우
+    navigate(`/admin/dong/${dongName}`); // 관리자용 동 페이지로 이동
   };
 
   return (
