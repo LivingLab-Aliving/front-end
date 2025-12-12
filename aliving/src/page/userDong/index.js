@@ -19,7 +19,7 @@ const UserDongPage = () => {
   const { dongName } = useParams();
   const navigate = useNavigate();
   const [keyword, setKeyword] = useState("");
-  const [programType, setProgramType] = useState("유성형 프로그램");
+  const [programType, setProgramType] = useState("유성구청 프로그램");
   const [targetAudience, setTargetAudience] = useState("전체");
   const [tuitionFilter, setTuitionFilter] = useState("전체");
   const [startDate, setStartDate] = useState("");
@@ -206,7 +206,9 @@ const UserDongPage = () => {
               return (
                 <ProgramItem
                   key={program.id}
-                  onClick={() => navigate(`/dong/${dongName}/program/${program.id}`)}
+                  onClick={() =>
+                    navigate(`/dong/${dongName}/program/${program.id}`)
+                  }
                 >
                   <ImageWrapper>
                     <ProgramImage
@@ -329,9 +331,9 @@ const Title = styled.h1`
 `;
 
 const FilterSection = styled.section`
-  background: #f6f6f6;
-  border-top: 1px solid #b2b2b2;
-  border-bottom: 1px solid #b2b2b2;
+  background: #f5f6f9;
+  border-top: 1px solid #d2d6db;
+  border-bottom: 1px solid #d2d6db;
   padding: 32px 40px;
   display: flex;
   flex-direction: column;
@@ -389,12 +391,41 @@ const DateInput = styled.input`
 const Select = styled.select`
   flex: 1;
   min-width: 180px;
-  padding: 10px 12px;
+  padding: 12px 40px 12px 16px;
   border: 1px solid #d0d0d0;
   border-radius: 8px;
   font-size: 14px;
+  font-weight: 500;
   background: #fff;
   color: #333;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: #1557b7;
+    background-color: #f8f9fa;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: #1557b7;
+    box-shadow: 0 0 0 3px rgba(21, 87, 183, 0.1);
+    background-color: #fff;
+  }
+
+  &:active {
+    border-color: #1248a0;
+  }
+
+  option {
+    padding: 8px;
+    font-weight: 400;
+  }
 `;
 
 const SearchWrapper = styled.div`
@@ -415,19 +446,19 @@ const SearchInput = styled.input`
 `;
 
 const SearchButton = styled.button`
-  padding: 10px 24px;
+  padding: 10px 19px;
   border: none;
-  border-radius: 8px;
+  border-radius: 4px;
   font-size: 14px;
   font-weight: 600;
-  background: #555;
+  background: #1557b7;
   color: #fff;
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.2s ease;
 
   &:hover {
-    background: #333;
+    background: #1248a0;
   }
 `;
 
@@ -443,7 +474,7 @@ const TabButton = styled.button`
   padding: 12px 0;
   border: none;
   background: transparent;
-  color: ${({ $active }) => ($active ? "#111" : "#999")};
+  color: ${({ $active }) => ($active ? "#1557b7" : "#999")};
   font-size: 16px;
   font-weight: ${({ $active }) => ($active ? "600" : "400")};
   cursor: pointer;
@@ -458,7 +489,7 @@ const TabButton = styled.button`
     left: 0;
     right: 0;
     height: ${({ $active }) => ($active ? "3px" : "0")};
-    background: ${({ $active }) => ($active ? "#555" : "transparent")};
+    background: ${({ $active }) => ($active ? "#1557B7" : "transparent")};
     transition: height 0.2s ease, background 0.2s ease;
   }
 `;
@@ -505,12 +536,12 @@ const ProgramImage = styled.img`
 const DaysBadge = styled.span`
   display: inline-block;
   padding: 4px 8px;
-  background: ${({ $closed }) => ($closed ? "#ECECEC" : "#fff")};
-  color: ${({ $closed }) => ($closed ? "#9D9D9C" : "#424242")};
+  background: ${({ $closed }) => ($closed ? "#ECECEC" : "#37B7EC")};
+  color: ${({ $closed }) => ($closed ? "#9D9D9C" : "#fff")};
   font-size: 12px;
   font-weight: 600;
   border-radius: 16px;
-  border: 0.5px solid ${({ $closed }) => ($closed ? "#fff" : "#424242")};
+  border: 0.5px solid ${({ $closed }) => ($closed ? "#fff" : "#37B7EC")};
   white-space: nowrap;
   width: fit-content;
   align-self: flex-start;
@@ -627,8 +658,8 @@ const PageNumberButton = styled.button`
   padding: 0 8px;
   border-radius: 6px;
   border: ${({ $active }) => ($active ? "none" : "none")};
-  background: ${({ $active }) => ($active ? "#707070" : "transparent")};
-  color: ${({ $active }) => ($active ? "#fff" : "#707070")};
+  background: ${({ $active }) => ($active ? "#1557b7" : "transparent")};
+  color: ${({ $active }) => ($active ? "#fff" : "#000000")};
   font-size: 14px;
   font-weight: ${({ $active }) => ($active ? "600" : "400")};
   cursor: pointer;
