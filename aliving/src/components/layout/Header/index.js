@@ -1,40 +1,39 @@
-import React, { useState } from 'react';
-import styled from 'styled-components';
-import { ReactComponent as LogoSvg } from '../../../assets/logo.svg';
-
+import React, { useState } from "react";
+import styled from "styled-components";
+import { ReactComponent as LogoSvg } from "../../../assets/logo.svg";
 
 const Header = () => {
-    // 임시 확인용
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const username = '홍길동';
+  // 임시 확인용
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const username = "홍길동";
 
-    const handleLogin = () => setIsLoggedIn(true);
-    const handleLogout = () => setIsLoggedIn(false);
+  const handleLogin = () => setIsLoggedIn(true);
+  const handleLogout = () => setIsLoggedIn(false);
 
-    return (
-        <HeaderContainer>
-            <Logo href="/"><LogoSvg /></Logo>
+  return (
+    <HeaderContainer>
+      <Logo href="/">
+        <LogoSvg />
+      </Logo>
 
-            <NavLinks>
-                {isLoggedIn ? (
-                    <>
-                        <UserName>{username}님</UserName>
-                        <Button onClick={handleLogout}>로그아웃</Button>
-                    </>
-                ) : (
-                    <>
-                        <Button onClick={handleLogin}>로그인</Button>
-                        <Button>회원가입</Button>
-                    </>
-                )}
-            </NavLinks>
-        </HeaderContainer>
-    );
+      <NavLinks>
+        {isLoggedIn ? (
+          <>
+            <UserName>{username}님</UserName>
+            <Button onClick={handleLogout}>로그아웃</Button>
+          </>
+        ) : (
+          <>
+            <Button onClick={handleLogin}>로그인</Button>
+            <Button>회원가입</Button>
+          </>
+        )}
+      </NavLinks>
+    </HeaderContainer>
+  );
 };
 
 export default Header;
-
-
 
 const HeaderContainer = styled.header`
   width: 100%;
@@ -47,17 +46,11 @@ const HeaderContainer = styled.header`
 
 const Logo = styled.a`
   text-decoration: none;
-  
+
   svg {
     height: 2.5rem;
     width: auto;
   }
-`;
-
-const Text = styled.span`
-  font-size: 1rem;
-  color: #555;
-  margin-left: 1rem;
 `;
 
 const UserName = styled.span`
