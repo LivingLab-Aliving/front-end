@@ -3,7 +3,11 @@ import { useParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { ReactComponent as ArrowLeft } from "../../assets/icon/arrow_left.svg";
 import UnknownImage from "../../assets/unknown_image.svg";
-import { PROGRAMS_BY_DONG, PAYMENT_GUIDE, ETC_GUIDE } from "../../assets/data/data";
+import {
+  PROGRAMS_BY_DONG,
+  PAYMENT_GUIDE,
+  ETC_GUIDE,
+} from "../../assets/data/data";
 import { formatPeriod, calculateDaysRemaining } from "../../util/utils";
 
 const ProgramDetail = () => {
@@ -108,7 +112,13 @@ const ProgramDetail = () => {
         </InfoGrid>
 
         <ButtonWrapper>
-          <ApplyButton onClick={() => setShowModal(true)}>신청하기</ApplyButton>
+          <ApplyButton
+            onClick={() =>
+              navigate(`/dong/${dongName}/program/${programId}/apply`)
+            }
+          >
+            신청하기
+          </ApplyButton>
         </ButtonWrapper>
       </ContentSection>
 
@@ -282,10 +292,10 @@ const ProgramHeader = styled.div`
 
 const StatusBadge = styled.span`
   display: inline-block;
-  padding: 8px 20px;
-  background: ${({ $type }) => ($type === "closed" ? "#ECECEC" : "#E5F7FF")};
-  color: ${({ $type }) => ($type === "closed" ? "#9D9D9C" : "#006B97")};
-  font-weight: 700;
+  padding: 8px 14px;
+  background: ${({ $type }) => ($type === "closed" ? "#ECECEC" : "#37B7EC")};
+  color: ${({ $type }) => ($type === "closed" ? "#9D9D9C" : "#ffffff")};
+  font-weight: 500;
   font-size: 16px;
   border-radius: 50px;
   line-height: 1.2;
@@ -331,24 +341,32 @@ const InfoTableWrapper = styled.div`
 
 const InfoTable = styled.table`
   width: 100%;
-  border-top: 1px solid #ddd;
+  border-top: 1px solid #d2d6db;
+  border-bottom: 1px solid #d2d6db;
   border-collapse: collapse;
+  border-radius: 0;
 `;
 
 const TableRow = styled.tr`
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #d2d6db;
+  background: #f5f6f9;
+
+  &:last-child {
+    border-bottom: none;
+  }
 `;
 
 const TableHeader = styled.th`
   padding: 16px 24px;
   text-align: center;
-  background: #f5f6f9;
+  background: transparent;
   color: #333;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 14px;
-  width: 140px;
+  width: 200px;
   vertical-align: middle;
   white-space: nowrap;
+  border-right: 1px solid #d2d6db;
 `;
 
 const TableData = styled.td`
@@ -356,6 +374,7 @@ const TableData = styled.td`
   color: #333;
   font-size: 14px;
   line-height: 1.5;
+  background: #fff;
 `;
 
 const ButtonWrapper = styled.div`
@@ -365,7 +384,7 @@ const ButtonWrapper = styled.div`
 `;
 
 const ApplyButton = styled.button`
-  padding: 13px 60px;
+  padding: 13px 72px;
   background: #1557b7;
   color: white;
   border: none;
