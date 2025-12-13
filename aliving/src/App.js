@@ -20,6 +20,7 @@ import AdminDongPage from "./page/adminDong";
 import ProgramCreatePage from "./page/adminDong/programCreate";
 import ProgramEditPage from "./page/adminDong/programEdit";
 import ProgramSuccessPage from "./page/adminDong/programSuccess";
+import AdminProgramDetail from "./page/adminDong/ProgramDetail";
 
 function AppContent() {
   const location = useLocation();
@@ -49,6 +50,10 @@ function AppContent() {
             element={<ProgramApplicationSuccess />}
           />
           <Route path="/admin/dong/:dongName" element={<AdminDongPage />} />
+          <Route
+            path="/admin/dong/:dongName/program/:programId"
+            element={<AdminProgramDetail />}
+          />
           <Route
             path="/admin/dong/:dongName/add"
             element={<ProgramCreatePage />}
