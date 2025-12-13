@@ -21,6 +21,9 @@ import ProgramCreatePage from "./page/adminDong/programCreate";
 import ProgramEditPage from "./page/adminDong/programEdit";
 import ProgramSuccessPage from "./page/adminDong/programSuccess";
 import AdminProgramDetail from "./page/adminDong/ProgramDetail";
+import ApplicationEdit from "./page/adminDong/ApplicationEdit";
+import ApplicationCreate from "./page/adminDong/ApplicationCreate";
+import ApplicationAdd from "./page/adminDong/ApplicationAdd";
 
 function AppContent() {
   const location = useLocation();
@@ -65,6 +68,18 @@ function AppContent() {
           <Route
             path="/admin/dong/:dongName/success"
             element={<ProgramSuccessPage />}
+          />
+          <Route
+            path="/admin/dong/:dongName/application-form-edit"
+            element={<ApplicationEdit />}
+          />
+          <Route
+            path="/admin/dong/:dongName/application-create"
+            element={<ApplicationCreate />}
+          />
+          <Route
+            path="/admin/dong/:dongName/application-add"
+            element={<ApplicationAdd />}
           />
         </Routes>
       </Main>
