@@ -38,12 +38,20 @@ const ProgramEditPage = () => {
         detailInfo: '',
     });
 
-    // 기존 프로그램 데이터 불러오기
+    // TODO: 실제 API 호출로 기존 프로그램 데이터 불러오기
     useEffect(() => {
         const programs = PROGRAMS_BY_DONG[dongName] || [];
         const program = programs.find(p => p.id === programId);
         
         if (program) {
+            // capacity에서 숫자만 추출
+            const capacityMatch = program.capacity?.match(/(\d+)명$/);
+            const capacityNumber = capacityMatch ? capacityMatch[1] : '';
+            
+            // tuition에서 숫자만 추출
+            const tuitionMatch = program.tuition?.match(/^([\d,]+)원/);
+            const tuitionNumber = tuitionMatch ? tuitionMatch[1].replace(/,/g, '') : '';
+            
             setFormData({
                 programName: program.title || '',
                 scheduleStartHour: '10',
@@ -61,14 +69,22 @@ const ProgramEditPage = () => {
                 recruitmentPeriodEndMinute: '00',
                 location: program.place || '',
                 category: program.class || '',
-                capacity: '',
-                fee: '',
+                capacity: capacityNumber,
+                fee: tuitionNumber,
                 materials: program.materials || '',
                 institution: program.organization || dongName,
                 recruitmentLimit: '대전광역시 유성구민',
                 instructor: program.instructor?.name || '',
-                attachment: null,
-                detailInfo: '',
+                attachment: program.attachment || null,
+                detailInfo: program.detailInfo || '',
+            });
+            
+            console.log("불러온 프로그램 데이터:", program);
+            console.log("매핑된 폼 데이터:", {
+                capacity: capacityNumber,
+                fee: tuitionNumber,
+                attachment: program.attachment,
+                detailInfo: program.detailInfo
             });
         }
     }, [dongName, programId]);
@@ -88,10 +104,14 @@ const ProgramEditPage = () => {
         }));
     };
 
+    const handleEditApplicationForm = () => {
+        navigate(`/admin/dong/${dongName}/application-form-edit?programId=${programId}`);
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
         
-        // 🚨 실제로는 여기서 서버 API 호출: PUT/PATCH 요청 (프로그램 수정)
+        // TODO: 실제 API 호출로 프로그램 수정 저장
         
         navigate(`/admin/dong/${dongName}/success`);
     };
@@ -101,7 +121,7 @@ const ProgramEditPage = () => {
     };
 
     const handleDuplicateCheck = () => {
-        // 🚨 실제로는 여기서 서버 API 호출: 프로그램명 중복 체크
+        // TODO: 실제 API 호출로 프로그램명 중복 체크
         setIsDuplicateChecked(true);
     };
 
@@ -344,16 +364,24 @@ const ProgramEditPage = () => {
                         <TableRow>
                             <FieldLabel>신청인원</FieldLabel>
                             <FieldValue>
-                                <InputWithUnit>
-                                    <Input
-                                        id="capacity"
-                                        name="capacity"
-                                        type="number"
-                                        value={formData.capacity}
-                                        onChange={handleChange}
-                                    />
-                                    <UnitLabel>명</UnitLabel>
-                                </InputWithUnit>
+                                <CapacityWrapper>
+                                    <InputWithUnit>
+                                        <Input
+                                            id="capacity"
+                                            name="capacity"
+                                            type="number"
+                                            value={formData.capacity}
+                                            onChange={handleChange}
+                                        />
+                                        <UnitLabel>명</UnitLabel>
+                                    </InputWithUnit>
+                                    <ApplicationFormButton 
+                                        type="button"
+                                        onClick={handleEditApplicationForm}
+                                    >
+                                        신청폼 수정
+                                    </ApplicationFormButton>
+                                </CapacityWrapper>
                             </FieldValue>
                         </TableRow>
 
@@ -771,5 +799,30 @@ const CancelButton = styled(BaseButton)`
 
   &:hover {
     background: #f5f5f5;
+  }
+`;
+
+const CapacityWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+`;
+
+const ApplicationFormButton = styled.button`
+  padding: 8px 16px;
+  background: #1557b7;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  font-family: "Pretendard", sans-serif;
+
+  &:hover {
+    background: #1248a0;
   }
 `;
