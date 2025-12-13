@@ -17,7 +17,7 @@ const DongPage = () => {
   const [sortBy, setSortBy] = useState('');
   const itemsPerPage = 6;
 
-  // 프로그램 목록 설정
+  // TODO: 실제 API 호출로 프로그램 목록 가져오기
   useEffect(() => {
     const dongPrograms = PROGRAMS_BY_DONG[dongName] || [];
     setPrograms(dongPrograms);
@@ -191,6 +191,7 @@ const DongPage = () => {
                       <TableCell>{program.class || '-'}</TableCell>
                       <TableCell>{program.instructor?.name || '-'}</TableCell>
                       <TableCell>
+                        {/* TODO: 드롭다운 메뉴 추가 (수정/삭제/복사 등) */}
                         <IconButton onClick={() => handleEditProgram(program.id)}>⋮</IconButton>
                       </TableCell>
                     </TableRow>
@@ -211,7 +212,7 @@ const DongPage = () => {
 
 export default DongPage;
 
-const HeroSection = styled.div`
+const HeroSection = styled.header`
   width: 100%;
   padding: 48px 40px;
   background-color: #f5f6f9;
@@ -232,7 +233,7 @@ const SubTitle = styled.p`
   font-family: "Pretendard", sans-serif;
 `;
 
-const Container = styled.div`
+const Container = styled.section`
   flex: 1;
   padding: 48px 40px 96px;
   max-width: 1400px;
