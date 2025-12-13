@@ -473,22 +473,23 @@ const PageContainer = styled.section`
   display: flex;
   justify-content: center;
   flex: 1;
-  padding: 80px 24px;
-  background-color: #f9f9f9;
+  padding: 48px 40px 96px;
+  background-color: #f5f6f9;
 `;
 
 const Inner = styled.div`
-  width: min(900px, 100%);
+  width: min(1000px, 100%);
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 32px;
 `;
 
 const Title = styled.h1`
   font-size: 28px;
   font-weight: 700;
   color: #111;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+  font-family: "Pretendard", sans-serif;
 `;
 
 const Form = styled.form`
@@ -501,26 +502,27 @@ const Form = styled.form`
 const Section = styled.div`
   background-color: #fff;
   padding: 32px;
-  border-radius: 12px;
-  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  border: 1px solid #d2d6db;
   display: flex;
   flex-direction: column;
   gap: 0;
 `;
 
 const SectionTitle = styled.h2`
-  font-size: 20px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 16px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #111;
+  margin-bottom: 24px;
   padding-bottom: 12px;
-  border-bottom: 2px solid #f0f0f0;
+  border-bottom: 1px solid #d2d6db;
+  font-family: "Pretendard", sans-serif;
 `;
 
 const TableRow = styled.div`
   display: flex;
   align-items: center;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #d2d6db;
   min-height: 60px;
   
   &:last-child {
@@ -531,17 +533,22 @@ const TableRow = styled.div`
 const FieldLabel = styled.div`
   width: 200px;
   min-width: 200px;
-  padding: 16px 20px;
+  padding: 16px 24px;
   font-weight: 600;
-  font-size: 0.95rem;
-  color: #444;
-  background-color: #fafafa;
-  border-right: 1px solid #f0f0f0;
+  font-size: 14px;
+  color: #333;
+  background-color: #f5f6f9;
+  border-right: 1px solid #d2d6db;
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+  font-family: "Pretendard", sans-serif;
 `;
 
 const FieldValue = styled.div`
   flex: 1;
-  padding: 16px 20px;
+  padding: 16px 24px;
+  background: #fff;
 `;
 
 const WideFieldValue = styled.div`
@@ -630,42 +637,72 @@ const UnitLabel = styled.span`
 const TextButton = styled.button`
   background: none;
   border: none;
-  color: ${props => props.$isChecked ? '#0070f3' : '#666'};
-  font-size: 0.95rem;
+  color: ${props => props.$isChecked ? '#1557b7' : '#666'};
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   padding: 0;
   white-space: nowrap;
   transition: color 0.2s;
+  font-family: "Pretendard", sans-serif;
   
   &:hover {
-    color: #0070f3;
+    color: #1557b7;
   }
 `;
 
 const Input = styled.input`
-  padding: 0.75rem;
+  padding: 10px 12px;
   border: 1px solid #d0d0d0;
-  border-radius: 6px;
-  font-size: 1rem;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #fff;
+  color: #333;
+  font-family: "Pretendard", sans-serif;
   
   &:focus {
     outline: none;
-    border-color: #0070f3;
+    border-color: #1557b7;
+    box-shadow: 0 0 0 3px rgba(21, 87, 183, 0.1);
   }
 `;
 
 const Select = styled.select`
-  padding: 0.75rem;
+  padding: 12px 40px 12px 16px;
   border: 1px solid #d0d0d0;
-  border-radius: 6px;
-  font-size: 1rem;
-  background-color: #fff;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  background: #fff;
+  color: #333;
   cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px;
+  transition: all 0.2s ease;
+  font-family: "Pretendard", sans-serif;
   
+  &:hover {
+    border-color: #1557b7;
+    background-color: #f8f9fa;
+  }
+
   &:focus {
     outline: none;
-    border-color: #0070f3;
+    border-color: #1557b7;
+    box-shadow: 0 0 0 3px rgba(21, 87, 183, 0.1);
+    background-color: #fff;
+  }
+
+  &:active {
+    border-color: #1248a0;
+  }
+
+  option {
+    padding: 8px;
+    font-weight: 400;
   }
 `;
 
@@ -716,12 +753,13 @@ const BaseButton = styled.button`
 `;
 
 const SubmitButton = styled(BaseButton)`
-  background: #0070f3;
+  background: #1557b7;
   color: white;
-  border-color: #0070f3;
+  border-color: #1557b7;
+  font-family: "Pretendard", sans-serif;
 
   &:hover {
-    background: #005bb5;
+    background: #1248a0;
   }
 `;
 
@@ -729,6 +767,7 @@ const CancelButton = styled(BaseButton)`
   background: #fff;
   color: #555;
   border-color: #d0d0d0;
+  font-family: "Pretendard", sans-serif;
 
   &:hover {
     background: #f5f5f5;
