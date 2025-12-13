@@ -18,13 +18,14 @@ const AdminProgramDetail = () => {
   const [selectAll, setSelectAll] = useState(false);
   const [applications, setApplications] = useState([]);
 
+  // TODO: 실제 API 호출로 프로그램 데이터 가져오기
   useEffect(() => {
     const programs = PROGRAMS_BY_DONG[dongName] || [];
     const foundProgram = programs.find(p => p.id === programId);
     setProgram(foundProgram);
   }, [dongName, programId]);
 
-  // 임시 신청 데이터 초기화
+  // TODO: 실제 API 호출로 프로그램 신청자 데이터 가져오기
   useEffect(() => {
     const mockApplications = [
     { 
@@ -149,6 +150,16 @@ const AdminProgramDetail = () => {
     navigate(`/admin/dong/${dongName}`);
   };
 
+  const handleEditProgram = () => {
+    navigate(`/admin/dong/${dongName}/edit/${programId}`);
+  };
+
+  const handleAddApplication = () => {
+    navigate(`/admin/dong/${dongName}/application-add?programId=${programId}`);
+  };
+
+
+
   // 체크박스 핸들러
   const handleSelectAll = (checked) => {
     setSelectAll(checked);
@@ -179,7 +190,7 @@ const AdminProgramDetail = () => {
     // 로컬 alert 생성 - 삭제 확인 대화상자
     const confirmDelete = window.confirm(`선택된 ${selectedItems.size}명을 삭제하시겠습니까?`);
     if (confirmDelete) {
-      // 임시로 목업 데이터 제거
+      // TODO: 실제 API 호출로 선택된 신청자들 삭제
       const updatedApplications = applications.filter(app => !selectedItems.has(app.id));
       setApplications(updatedApplications);
       
@@ -215,7 +226,7 @@ const AdminProgramDetail = () => {
           <StatusLabel>모집상태</StatusLabel>
           <StatusDate>{program.applicationPeriod || '2025.08.01 ~ 생성'}</StatusDate>
         </StatusInfo>
-        <MenuButton>⋮</MenuButton>
+        <MenuButton onClick={handleEditProgram}>⋮</MenuButton>
       </Header>
 
       <TabContainer>
@@ -335,7 +346,7 @@ const AdminProgramDetail = () => {
                 <DownloadIcon />
                 엑셀 다운로드
               </TextButton>
-              <TextButton>
+              <TextButton onClick={handleAddApplication}>
                 <GroupAddIcon />
                 인원 추가 등록
               </TextButton>
@@ -720,6 +731,7 @@ const TableCell = styled.td`
   font-family: "Pretendard", sans-serif;
 `;
 
+// eslint-disable-next-line
 const StatusBadge = styled.span`
   display: inline-block;
   padding: 4px 8px;
@@ -734,6 +746,7 @@ const StatusBadge = styled.span`
   font-family: "Pretendard", sans-serif;
 `;
 
+// eslint-disable-next-line
 const ActionButton = styled.button`
   padding: 10px 19px;
   border: none;
@@ -816,6 +829,7 @@ const ActionButtons = styled.div`
   align-items: center;
 `;
 
+// eslint-disable-next-line
 const IconButton = styled.button`
   width: 26px;
   height: 26px;
@@ -905,3 +919,5 @@ const TextButton = styled.button`
     height: 14px;
   }
 `;
+
+
