@@ -4,7 +4,7 @@ export const PROGRAMS_BY_DONG = {
   관평동: [
     {
       id: "B-17",
-      type: "유성형 프로그램",
+      type: "유성구청 프로그램",
       class: "정규강좌",
       title: "풍물 놀이",
       place: "지하 강의실",
@@ -53,7 +53,7 @@ export const PROGRAMS_BY_DONG = {
     },
     {
       id: "B-4",
-      type: "유성형 프로그램",
+      type: "유성구청 프로그램",
       class: "특별",
       title: "탁구",
       place: "지하 강의실",
@@ -71,7 +71,7 @@ export const PROGRAMS_BY_DONG = {
     },
     {
       id: "B-24",
-      type: "유성형 프로그램",
+      type: "유성구청 프로그램",
       class: "동아리",
       title: "라인댄스 (여성 전용반)",
       place: "지하 강의실",
@@ -89,7 +89,7 @@ export const PROGRAMS_BY_DONG = {
     },
     {
       id: "B-12",
-      type: "자치형 프로그램",
+      type: "자치동 프로그램",
       class: "정규강좌",
       title: "밸리댄스 (여성 전용반)",
       place: "제2강의실",
@@ -107,7 +107,7 @@ export const PROGRAMS_BY_DONG = {
     },
     {
       id: "B-29",
-      type: "자치형 프로그램",
+      type: "자치동 프로그램",
       class: "특별",
       title: "요가 (여성 전용반)",
       place: "제2강의실",
@@ -125,7 +125,7 @@ export const PROGRAMS_BY_DONG = {
     },
     {
       id: "B-31",
-      type: "자치형 프로그램",
+      type: "자치동 프로그램",
       class: "동아리",
       title: "요가테라피",
       place: "제2강의실",
@@ -143,7 +143,7 @@ export const PROGRAMS_BY_DONG = {
     },
     {
       id: "B-35",
-      type: "유성형 프로그램",
+      type: "유성구청 프로그램",
       class: "정규강좌",
       title: "놀이로 배우는 영어동화",
       place: "다목적실",
@@ -161,7 +161,7 @@ export const PROGRAMS_BY_DONG = {
     },
     {
       id: "B-39",
-      type: "자치형 프로그램",
+      type: "자치동 프로그램",
       class: "특별",
       title: "시니어 스마트폰 교실",
       place: "컴퓨터실",
@@ -179,7 +179,7 @@ export const PROGRAMS_BY_DONG = {
     },
     {
       id: "B-43",
-      type: "유성형 프로그램",
+      type: "유성구청 프로그램",
       class: "동아리",
       title: "초등 코딩 입문",
       place: "컴퓨터실",
@@ -197,7 +197,7 @@ export const PROGRAMS_BY_DONG = {
     },
     {
       id: "B-45",
-      type: "자치형 프로그램",
+      type: "자치동 프로그램",
       class: "정규강좌",
       title: "생활 도자기 공예",
       place: "창작실",
@@ -215,7 +215,7 @@ export const PROGRAMS_BY_DONG = {
     },
     {
       id: "B-48",
-      type: "유성형 프로그램",
+      type: "유성구청 프로그램",
       class: "특별",
       title: "클래식 기타 앙상블",
       place: "음악연습실",
@@ -233,7 +233,7 @@ export const PROGRAMS_BY_DONG = {
     },
     {
       id: "B-52",
-      type: "자치형 프로그램",
+      type: "자치동 프로그램",
       class: "동아리",
       title: "생활 일본어 회화",
       place: "제1강의실",
@@ -252,7 +252,7 @@ export const PROGRAMS_BY_DONG = {
   ],
 };
 
-export const PROGRAM_TYPES = ["유성형 프로그램", "자치형 프로그램"];
+export const PROGRAM_TYPES = ["유성구청 프로그램", "자치동 프로그램"];
 export const TARGET_AUDIENCE_OPTIONS = [
   "전체",
   "성인",
