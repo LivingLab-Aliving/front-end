@@ -1,14 +1,19 @@
 // src/page/adminDong/programCreate.js
 
-import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
+import { saveApplicationForm } from '../../assets/data/applicationForms';
 
 const ProgramCreatePage = () => {
     const { dongName } = useParams();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     
     const [isDuplicateChecked, setIsDuplicateChecked] = useState(false);
+    const [applicationFormId, setApplicationFormId] = useState(null);
+    const [applicationFormData, setApplicationFormData] = useState(null);
+    const [showFormPreview, setShowFormPreview] = useState(false);
     
     const [formData, setFormData] = useState({
         programName: '',
@@ -37,6 +42,26 @@ const ProgramCreatePage = () => {
         detailInfo: '',
     });
 
+    // URL 파라미터에서 tempFormId 확인
+    useEffect(() => {
+        const tempFormId = searchParams.get('tempFormId');
+        if (tempFormId) {
+            setApplicationFormId(tempFormId);
+            console.log("임시 신청폼 ID 설정됨:", tempFormId);
+            
+            // 임시 폼 데이터 확인
+            const tempForm = JSON.parse(sessionStorage.getItem('tempApplicationForm') || '{}');
+            if (tempForm.id === tempFormId) {
+                console.log("임시 폼 데이터 확인됨:", tempForm);
+                console.log("기본 필드:", tempForm.basicFields);
+                console.log("추가 필드:", tempForm.additionalFields);
+                setApplicationFormData(tempForm);
+            }
+        }
+    }, [searchParams]);
+
+
+
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({
@@ -55,7 +80,40 @@ const ProgramCreatePage = () => {
     const handleSubmit = (e) => {
         e.preventDefault();
         
-        // 🚨 실제로는 여기서 서버 API 호출: POST 요청 (새 프로그램 등록)
+        const programId = `program_${Date.now()}`;
+        const programData = {
+            ...formData,
+            id: programId,
+            applicationFormId: applicationFormId, // 신청폼 ID 연결
+        };
+        
+        // TODO: 실제 API 호출로 프로그램과 신청폼 함께 저장
+        // 임시로 localStorage에 저장
+        const existingPrograms = JSON.parse(localStorage.getItem('programs') || '{}');
+        if (!existingPrograms[dongName]) {
+            existingPrograms[dongName] = [];
+        }
+        existingPrograms[dongName].push(programData);
+        localStorage.setItem('programs', JSON.stringify(existingPrograms));
+        
+        // 임시 저장된 신청폼을 정식으로 저장
+        if (applicationFormId) {
+            const tempForm = JSON.parse(sessionStorage.getItem('tempApplicationForm') || '{}');
+            if (tempForm.tempId === applicationFormId) {
+                // 임시 신청폼을 정식 신청폼으로 저장
+                const savedForm = saveApplicationForm(dongName, programId, {
+                    programName: formData.programName,
+                    basicFields: tempForm.basicFields,
+                    additionalFields: tempForm.additionalFields,
+                });
+                console.log("신청폼이 프로그램과 연결되어 저장됨:", savedForm);
+                
+                // 임시 데이터 삭제
+                sessionStorage.removeItem('tempApplicationForm');
+            }
+        }
+        
+        console.log("프로그램 데이터:", programData);
         
         navigate(`/admin/dong/${dongName}/success`);
     };
@@ -65,9 +123,15 @@ const ProgramCreatePage = () => {
     };
 
     const handleDuplicateCheck = () => {
-        // 🚨 실제로는 여기서 서버 API 호출: 프로그램명 중복 체크
+        // TODO: 실제 API 호출로 프로그램명 중복 체크 
         setIsDuplicateChecked(true);
     };
+
+    const handleCreateApplicationForm = () => {
+        navigate(`/admin/dong/${dongName}/application-create`);
+    };
+
+
 
     return (
         <PageContainer>
@@ -309,18 +373,101 @@ const ProgramCreatePage = () => {
                         <TableRow>
                             <FieldLabel>신청인원</FieldLabel>
                             <FieldValue>
-                                <InputWithUnit>
-                                    <Input
-                                        id="capacity"
-                                        name="capacity"
-                                        type="number"
-                                        value={formData.capacity}
-                                        onChange={handleChange}
-                                    />
-                                    <UnitLabel>명</UnitLabel>
-                                </InputWithUnit>
+                                <CapacityWrapper>
+                                    <InputWithUnit>
+                                        <Input
+                                            id="capacity"
+                                            name="capacity"
+                                            type="number"
+                                            value={formData.capacity}
+                                            onChange={handleChange}
+                                        />
+                                        <UnitLabel>명</UnitLabel>
+                                    </InputWithUnit>
+                                    {applicationFormId ? (
+                                        <FormConnectedWrapper>
+                                            <FormConnectedIndicator>
+                                                ✓ 신청폼 연결됨
+                                                <EditFormButton 
+                                                    type="button"
+                                                    onClick={handleCreateApplicationForm}
+                                                >
+                                                    수정
+                                                </EditFormButton>
+                                            </FormConnectedIndicator>
+                                            {applicationFormData && (
+                                                <FormPreviewButton 
+                                                    type="button"
+                                                    onClick={() => setShowFormPreview(!showFormPreview)}
+                                                >
+                                                    {showFormPreview ? '미리보기 숨기기' : '미리보기'}
+                                                </FormPreviewButton>
+                                            )}
+                                        </FormConnectedWrapper>
+                                    ) : (
+                                        <ApplicationFormButton 
+                                            type="button"
+                                            onClick={handleCreateApplicationForm}
+                                        >
+                                            신청폼 만들기
+                                        </ApplicationFormButton>
+                                    )}
+                                </CapacityWrapper>
                             </FieldValue>
                         </TableRow>
+
+                        {/* 폼 미리보기 행 */}
+                        {showFormPreview && applicationFormData && (
+                            <FormPreviewRow>
+                                <FieldLabel>신청폼 미리보기</FieldLabel>
+                                <FieldValue>
+                                    <FormPreviewContainer>
+                                        <PreviewTitle>생성된 신청폼</PreviewTitle>
+                                        
+                                        {/* 기본 필드들 */}
+                                        <PreviewSection>
+                                            <PreviewSectionTitle>기본 정보</PreviewSectionTitle>
+                                            <PreviewFieldList>
+                                                <PreviewField>• 이름</PreviewField>
+                                                <PreviewField>• 주소</PreviewField>
+                                                <PreviewField>• 연락처</PreviewField>
+                                                <PreviewField>• 생년월일</PreviewField>
+                                                <PreviewField>• 이메일</PreviewField>
+                                            </PreviewFieldList>
+                                        </PreviewSection>
+
+                                        {/* 추가 필드들 */}
+                                        {applicationFormData.additionalFields && applicationFormData.additionalFields.length > 0 && (
+                                            <PreviewSection>
+                                                <PreviewSectionTitle>추가 정보</PreviewSectionTitle>
+                                                <PreviewFieldList>
+                                                    {applicationFormData.additionalFields.map((field, index) => (
+                                                        <PreviewField key={index}>
+                                                            • {field.label} 
+                                                            <FieldTypeTag $type={field.type}>
+                                                                {field.type === 'text' ? '단답형' : '객관식'}
+                                                            </FieldTypeTag>
+                                                            {field.required && <RequiredTag>필수</RequiredTag>}
+                                                            {field.type === 'radio' && field.options && (
+                                                                <OptionsList>
+                                                                    {field.options.map((option, optIndex) => (
+                                                                        <OptionItem key={optIndex}>- {option.text}</OptionItem>
+                                                                    ))}
+                                                                </OptionsList>
+                                                            )}
+                                                        </PreviewField>
+                                                    ))}
+                                                </PreviewFieldList>
+                                            </PreviewSection>
+                                        )}
+                                        
+                                        <PreviewFooter>
+                                            총 {5 + (applicationFormData.additionalFields?.length || 0)}개 필드
+                                        </PreviewFooter>
+                                    </FormPreviewContainer>
+                                </FieldValue>
+                            </FormPreviewRow>
+                        )}
 
                         <TableRow>
                             <FieldLabel>수강료</FieldLabel>
@@ -737,3 +884,168 @@ const CancelButton = styled(BaseButton)`
     background: #f5f5f5;
   }
 `;
+
+const CapacityWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+`;
+
+const ApplicationFormButton = styled.button`
+  padding: 8px 16px;
+  background: #1557b7;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  font-family: "Pretendard", sans-serif;
+
+  &:hover {
+    background: #1248a0;
+  }
+`;
+
+const FormConnectedIndicator = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #e8f5e8;
+  color: #2d5a2d;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: "Pretendard", sans-serif;
+`;
+
+const EditFormButton = styled.button`
+  padding: 4px 8px;
+  background: #1557b7;
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: "Pretendard", sans-serif;
+
+  &:hover {
+    background: #1248a0;
+  }
+`;
+
+const FormConnectedWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const FormPreviewButton = styled.button`
+  padding: 4px 8px;
+  background: #28a745;
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: "Pretendard", sans-serif;
+
+  &:hover {
+    background: #218838;
+  }
+`;
+
+const FormPreviewRow = styled.tr`
+  background: #f8f9fa;
+`;
+
+const FormPreviewContainer = styled.div`
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 8px 0;
+`;
+
+const PreviewTitle = styled.h4`
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 16px;
+  font-family: "Pretendard", sans-serif;
+`;
+
+const PreviewSection = styled.div`
+  margin-bottom: 16px;
+`;
+
+const PreviewSectionTitle = styled.h5`
+  font-size: 14px;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 8px;
+  font-family: "Pretendard", sans-serif;
+`;
+
+const PreviewFieldList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const PreviewField = styled.div`
+  font-size: 13px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: "Pretendard", sans-serif;
+`;
+
+const FieldTypeTag = styled.span`
+  padding: 2px 6px;
+  background: ${props => props.$type === 'text' ? '#e3f2fd' : '#fff3e0'};
+  color: ${props => props.$type === 'text' ? '#1976d2' : '#f57c00'};
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+`;
+
+const RequiredTag = styled.span`
+  padding: 2px 6px;
+  background: #ffebee;
+  color: #d32f2f;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+`;
+
+const OptionsList = styled.div`
+  margin-left: 16px;
+  margin-top: 4px;
+`;
+
+const OptionItem = styled.div`
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 2px;
+`;
+
+const PreviewFooter = styled.div`
+  font-size: 12px;
+  color: #999;
+  text-align: center;
+  padding-top: 12px;
+  border-top: 1px solid #eee;
+  font-family: "Pretendard", sans-serif;
+`;
+
+
