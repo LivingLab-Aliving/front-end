@@ -15,6 +15,10 @@ const LoginPage = () => {
     navigate("/signup");
   };
 
+  const handleAdminLogin = () => {
+    navigate("/admin-login");
+  };
+
   return (
     <Container>
       <Content>
@@ -37,7 +41,7 @@ const LoginPage = () => {
           <LinkDivider>|</LinkDivider>
           <LinkItem href="#">문의하기</LinkItem>
           <LinkDivider>|</LinkDivider>
-          <LinkItem href="#">관리자 로그인</LinkItem>
+          <LinkButton onClick={handleAdminLogin}>관리자 로그인</LinkButton>
         </LinkSection>
       </Content>
     </Container>

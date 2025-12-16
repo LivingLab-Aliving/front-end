@@ -34,7 +34,21 @@ const HomePage = () => {
 
   const handleDongClick = (dongName) => {
     setActiveDong(dongName);
-    navigate(`/dong/${dongName}`);
+
+    // ✅ 로직 추가: 관리자 권한 확인 후 경로 분기
+    const isAdmin = localStorage.getItem("isAdminLoggedIn") === "true";
+    
+    let targetPath;
+
+    if (isAdmin) {
+      // 관리자일 경우: /admin/dong/:dongName 경로로 이동
+      targetPath = `/admin/dong/${dongName}`;
+    } else {
+      // 일반 사용자일 경우: /dong/:dongName 경로로 이동
+      targetPath = `/dong/${dongName}`;
+    }
+
+    navigate(targetPath);
   };
 
   return (
@@ -95,7 +109,7 @@ const HomePage = () => {
 
 export default HomePage;
 
-// Styled Components - Figma 1920px 기준 정확한 위치값
+// Styled Components - Figma 1920px 기준 정확한 위치값 (수정 없음)
 const PageContainer = styled.section`
   position: relative;
   width: 100%;

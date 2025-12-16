@@ -21,7 +21,14 @@ const AdminProgramDetail = () => {
   // TODO: 실제 API 호출로 프로그램 데이터 가져오기
   useEffect(() => {
     const programs = PROGRAMS_BY_DONG[dongName] || [];
-    const foundProgram = programs.find(p => p.id === programId);
+    
+    // localStorage에서 추가된 프로그램들도 가져오기
+    const localPrograms = JSON.parse(localStorage.getItem('programs') || '{}');
+    const localDongPrograms = localPrograms[dongName] || [];
+    
+    // 기존 데이터와 localStorage 데이터 합치기
+    const allPrograms = [...programs, ...localDongPrograms];
+    const foundProgram = allPrograms.find(p => p.id === programId);
     setProgram(foundProgram);
   }, [dongName, programId]);
 
@@ -242,7 +249,11 @@ const AdminProgramDetail = () => {
         <ContentWrapper>
           <LeftSection>
             <ProgramImage>
-              <ImagePlaceholder>프로그램 이미지</ImagePlaceholder>
+              {program?.programImage ? (
+                <img src={program.programImage} alt={program.title} />
+              ) : (
+                <ImagePlaceholder>프로그램 이미지</ImagePlaceholder>
+              )}
             </ProgramImage>
 
             <InstructorSection>
@@ -556,6 +567,12 @@ const ProgramImage = styled.div`
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 12px;
   overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
 `;
 
 const ImagePlaceholder = styled.div`

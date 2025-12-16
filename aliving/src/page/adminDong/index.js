@@ -20,8 +20,16 @@ const DongPage = () => {
   // TODO: 실제 API 호출로 프로그램 목록 가져오기
   useEffect(() => {
     const dongPrograms = PROGRAMS_BY_DONG[dongName] || [];
-    setPrograms(dongPrograms);
-    setFilteredPrograms(dongPrograms);
+    
+    // localStorage에서 추가된 프로그램들도 가져오기
+    const localPrograms = JSON.parse(localStorage.getItem('programs') || '{}');
+    const localDongPrograms = localPrograms[dongName] || [];
+    
+    // 기존 데이터와 localStorage 데이터 합치기
+    const allPrograms = [...dongPrograms, ...localDongPrograms];
+    
+    setPrograms(allPrograms);
+    setFilteredPrograms(allPrograms);
     setCurrentPage(1);
   }, [dongName]);
 
@@ -182,11 +190,17 @@ const DongPage = () => {
                           {program.title}
                         </ProgramName>
                       </TableCell>
-                      <TableCell>{program.quarter}</TableCell>
+                      <TableCell>{program.quarter ? (program.quarter.includes('분기') ? program.quarter : `${program.quarter}분기`) : '-'}</TableCell>
                       <TableCell>{educationPeriod}</TableCell>
                       <TableCell>{educationPeriod}</TableCell>
                       <TableCell>
-                        <ImageCell>이미지</ImageCell>
+                        <ImageCell>
+                          {program.programImage ? (
+                            <img src={program.programImage} alt={program.title} />
+                          ) : (
+                            "이미지"
+                          )}
+                        </ImageCell>
                       </TableCell>
                       <TableCell>{program.class || '-'}</TableCell>
                       <TableCell>{program.instructor?.name || '-'}</TableCell>
@@ -444,6 +458,13 @@ const ImageCell = styled.div`
   color: white;
   font-size: 0.75rem;
   font-weight: 600;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
 `;
 
 const ProgramName = styled.div`

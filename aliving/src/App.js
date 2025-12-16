@@ -24,6 +24,7 @@ import AdminProgramDetail from "./page/adminDong/ProgramDetail";
 import ApplicationEdit from "./page/adminDong/ApplicationEdit";
 import ApplicationCreate from "./page/adminDong/ApplicationCreate";
 import ApplicationAdd from "./page/adminDong/ApplicationAdd";
+import AdminLogin from "./page/login/AdminLogin";
 
 function AppContent() {
   const location = useLocation();
@@ -37,6 +38,7 @@ function AppContent() {
       <Main>
         <Routes>
           <Route path="/" element={<LoginPage />} />
+          <Route path="/admin-login" element={<AdminLogin />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/home" element={<HomePage />} />
           <Route path="/dong/:dongName" element={<UserDongPage />} />

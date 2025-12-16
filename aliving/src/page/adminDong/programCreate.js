@@ -15,7 +15,13 @@ const ProgramCreatePage = () => {
     const [applicationFormData, setApplicationFormData] = useState(null);
     const [showFormPreview, setShowFormPreview] = useState(false);
     
-    const [formData, setFormData] = useState({
+    // 프로그램 데이터 임시 저장 키 정의
+    const PROGRAM_DATA_SESSION_KEY = 'tempProgramData';
+    const APPLICATION_FORM_SESSION_KEY = 'tempApplicationForm';
+
+
+    // 프로그램 기본 데이터 초기 상태
+    const initialFormData = {
         programName: '',
         scheduleStartHour: '10',
         scheduleStartMinute: '00',
@@ -39,27 +45,38 @@ const ProgramCreatePage = () => {
         recruitmentLimit: '대전광역시 유성구민',
         instructor: '',
         attachment: null,
+        programImage: null,
         detailInfo: '',
-    });
+    };
+    
+    const [formData, setFormData] = useState(initialFormData);
 
-    // URL 파라미터에서 tempFormId 확인
+    // 🚩 [수정]: 컴포넌트 마운트 시 임시 폼 데이터 및 프로그램 데이터 확인 및 로드
     useEffect(() => {
         const tempFormId = searchParams.get('tempFormId');
+        
+        // 1. URL 파라미터로 신청폼 ID를 받고 돌아온 경우 (신청폼 만들기를 완료했을 때)
         if (tempFormId) {
-            setApplicationFormId(tempFormId);
-            console.log("임시 신청폼 ID 설정됨:", tempFormId);
+            const tempForm = JSON.parse(sessionStorage.getItem(APPLICATION_FORM_SESSION_KEY) || '{}');
             
-            // 임시 폼 데이터 확인
-            const tempForm = JSON.parse(sessionStorage.getItem('tempApplicationForm') || '{}');
             if (tempForm.id === tempFormId) {
-                console.log("임시 폼 데이터 확인됨:", tempForm);
-                console.log("기본 필드:", tempForm.basicFields);
-                console.log("추가 필드:", tempForm.additionalFields);
+                setApplicationFormId(tempFormId);
                 setApplicationFormData(tempForm);
             }
         }
-    }, [searchParams]);
+        
+        // 2. 임시 저장된 프로그램 데이터 확인 (ApplicationCreate에서 '취소' 등으로 돌아왔을 경우)
+        const savedProgramData = sessionStorage.getItem(PROGRAM_DATA_SESSION_KEY);
+        if (savedProgramData) {
+            const savedData = JSON.parse(savedProgramData);
+            // file 객체는 저장되지 않으므로, 나머지 데이터만 로드
+            setFormData(prev => ({ ...prev, ...savedData }));
+            
+            // 프로그램 데이터는 한 번 로드 후 삭제 (신청폼 데이터는 유지)
+            sessionStorage.removeItem(PROGRAM_DATA_SESSION_KEY);
+        }
 
+    }, [searchParams, dongName]);
 
 
     const handleChange = (e) => {
@@ -77,18 +94,60 @@ const ProgramCreatePage = () => {
         }));
     };
 
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                setFormData(prev => ({
+                    ...prev,
+                    programImage: event.target.result
+                }));
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleImageRemove = () => {
+        setFormData(prev => ({
+            ...prev,
+            programImage: null
+        }));
+        const fileInput = document.getElementById('programImage');
+        if (fileInput) {
+            fileInput.value = '';
+        }
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
         
         const programId = `program_${Date.now()}`;
+        
+        // ... (프로그램 데이터 구성 로직 유지)
         const programData = {
-            ...formData,
             id: programId,
-            applicationFormId: applicationFormId, // 신청폼 ID 연결
+            title: formData.programName,
+            type: "자치동 프로그램",
+            class: formData.category || "정규강좌",
+            place: formData.location,
+            tuition: formData.fee ? `${formData.fee}원` : "무료",
+            recruitment: `모집인원 ${formData.capacity}명`,
+            startDate: formData.educationPeriodStart,
+            endDate: formData.educationPeriodEnd,
+            schedule: `${formData.scheduleStartHour}:${formData.scheduleStartMinute}~${formData.scheduleEndHour}:${formData.scheduleEndMinute}`,
+            quarter: formData.quarter,
+            organization: formData.institution,
+            targetAudience: "성인",
+            instructor: {
+                name: formData.instructor || "미정",
+            },
+            programImage: formData.programImage,
+            applicationFormId: applicationFormId,
+            originalData: formData,
         };
         
-        // TODO: 실제 API 호출로 프로그램과 신청폼 함께 저장
-        // 임시로 localStorage에 저장
+        // ... (localStorage 저장 로직 유지)
         const existingPrograms = JSON.parse(localStorage.getItem('programs') || '{}');
         if (!existingPrograms[dongName]) {
             existingPrograms[dongName] = [];
@@ -98,9 +157,8 @@ const ProgramCreatePage = () => {
         
         // 임시 저장된 신청폼을 정식으로 저장
         if (applicationFormId) {
-            const tempForm = JSON.parse(sessionStorage.getItem('tempApplicationForm') || '{}');
-            if (tempForm.tempId === applicationFormId) {
-                // 임시 신청폼을 정식 신청폼으로 저장
+            const tempForm = JSON.parse(sessionStorage.getItem(APPLICATION_FORM_SESSION_KEY) || '{}');
+            if (tempForm.id === applicationFormId) {
                 const savedForm = saveApplicationForm(dongName, programId, {
                     programName: formData.programName,
                     basicFields: tempForm.basicFields,
@@ -109,7 +167,7 @@ const ProgramCreatePage = () => {
                 console.log("신청폼이 프로그램과 연결되어 저장됨:", savedForm);
                 
                 // 임시 데이터 삭제
-                sessionStorage.removeItem('tempApplicationForm');
+                sessionStorage.removeItem(APPLICATION_FORM_SESSION_KEY);
             }
         }
         
@@ -119,6 +177,9 @@ const ProgramCreatePage = () => {
     };
 
     const handleCancel = () => {
+        // 취소 시 임시 데이터 모두 삭제
+        sessionStorage.removeItem(APPLICATION_FORM_SESSION_KEY);
+        sessionStorage.removeItem(PROGRAM_DATA_SESSION_KEY);
         navigate(`/admin/dong/${dongName}`);
     };
 
@@ -127,10 +188,16 @@ const ProgramCreatePage = () => {
         setIsDuplicateChecked(true);
     };
 
+    // 🚩 [수정]: 신청폼 만들기/수정 버튼 클릭 시, 현재 입력된 프로그램 데이터를 임시 저장하고 이동
     const handleCreateApplicationForm = () => {
+        // 1. 현재 입력된 프로그램 데이터를 세션 스토리지에 임시 저장 (ProgramCreatePage의 상태 유지)
+        // 파일(`attachment`, `programImage`)은 JSON 직렬화 불가하므로 제외하고 저장
+        const dataToSave = { ...formData, attachment: null, programImage: formData.programImage }; 
+        sessionStorage.setItem(PROGRAM_DATA_SESSION_KEY, JSON.stringify(dataToSave));
+
+        // 2. 신청폼 생성 페이지로 이동
         navigate(`/admin/dong/${dongName}/application-create`);
     };
-
 
 
     return (
@@ -233,10 +300,10 @@ const ProgramCreatePage = () => {
                                     onChange={handleChange}
                                 >
                                     <option value="">선택</option>
-                                    <option value="1">1분기</option>
-                                    <option value="2">2분기</option>
-                                    <option value="3">3분기</option>
-                                    <option value="4">4분기</option>
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
                                 </Select>
                             </FieldValue>
                         </TableRow>
@@ -551,6 +618,33 @@ const ProgramCreatePage = () => {
                                     type="file"
                                     onChange={handleFileChange}
                                 />
+                            </FieldValue>
+                        </TableRow>
+
+                        <TableRow>
+                            <FieldLabel>프로그램 이미지</FieldLabel>
+                            <FieldValue>
+                                <ImageUploadWrapper>
+                                    <FileInput
+                                        id="programImage"
+                                        name="programImage"
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleImageChange}
+                                    />
+                                    {formData.programImage && (
+                                        <ImagePreview>
+                                            <img src={formData.programImage} alt="프로그램 이미지 미리보기" />
+                                            <ImageRemoveButton 
+                                                type="button" 
+                                                onClick={handleImageRemove}
+                                                title="이미지 제거"
+                                            >
+                                                ×
+                                            </ImageRemoveButton>
+                                        </ImagePreview>
+                                    )}
+                                </ImageUploadWrapper>
                             </FieldValue>
                         </TableRow>
 
@@ -963,8 +1057,12 @@ const FormPreviewButton = styled.button`
   }
 `;
 
-const FormPreviewRow = styled.tr`
-  background: #f8f9fa;
+const FormPreviewRow = styled(TableRow)`
+    /* FormPreviewRow가 TableRow에서 상속받으므로 border-bottom 제거 및 배경 설정 */
+    border-bottom: none; 
+    background: #f8f9fa;
+    display: block; /* 내부 요소를 수직으로 배치하기 위해 block으로 변경 */
+    padding: 0;
 `;
 
 const FormPreviewContainer = styled.div`
@@ -1049,3 +1147,52 @@ const PreviewFooter = styled.div`
 `;
 
 
+
+const ImageUploadWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const ImagePreview = styled.div`
+  width: 200px;
+  height: 150px;
+  border: 1px solid #d0d0d0;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9fa;
+  position: relative;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+`;
+
+const ImageRemoveButton = styled.button`
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 0, 0, 0.8);
+    transform: scale(1.1);
+  }
+`;

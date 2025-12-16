@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react"; // ✅ useEffect import 추가
 import { useParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { ReactComponent as ArrowLeft } from "../../assets/icon/arrow_left.svg";
@@ -6,18 +6,37 @@ import { ReactComponent as ArrowLeft } from "../../assets/icon/arrow_left.svg";
 const ApplicationCreate = () => {
   const { dongName } = useParams();
   const navigate = useNavigate();
+  
+  const PROGRAM_DATA_SESSION_KEY = 'tempProgramData'; // ProgramCreatePage와 동일한 키 사용
+  const APPLICATION_FORM_SESSION_KEY = 'tempApplicationForm'; // 신청폼 임시 저장 키
 
-  // 신청서 데이터
-  const [formData, setFormData] = useState({
+  // 초기 상태 정의
+  const initialFormData = {
     name: "",
     address: "",
     contact: "",
     birthDate: "",
     email: "",
-  });
+  };
+
+  // 신청서 데이터
+  const [formData, setFormData] = useState(initialFormData);
 
   // 추가 필드 데이터
   const [additionalFields, setAdditionalFields] = useState([]);
+
+  // 🚩 [추가]: 컴포넌트 마운트 시 임시 폼 데이터 로드
+  useEffect(() => {
+    const savedForm = sessionStorage.getItem(APPLICATION_FORM_SESSION_KEY);
+    if (savedForm) {
+      const form = JSON.parse(savedForm);
+      // 저장된 폼 데이터로 상태 초기화
+      setFormData(form.basicFields || initialFormData);
+      setAdditionalFields(form.additionalFields || []);
+      console.log("이전에 임시 저장된 신청폼 데이터가 로드되었습니다.");
+    }
+  }, []);
+
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -85,34 +104,62 @@ const ApplicationCreate = () => {
     setAdditionalFields(prev => prev.filter(item => item.id !== id));
   };
 
+  // 🚩 [수정]: 폼 생성 버튼 클릭 시, ProgramCreatePage로 돌아가기 전에 폼 데이터를 임시 저장
   const handleSubmit = (e) => {
     e.preventDefault();
     
+    const tempFormId = `temp_${Date.now()}`;
+    const applicationFormData = {
+      basicFields: formData,
+      additionalFields: additionalFields.map(field => {
+          // 옵션이 있는 경우 빈 옵션은 제외
+          if (field.type === 'radio' && field.options) {
+              field.options = field.options.filter(opt => opt.text.trim() !== '');
+          }
+          return field;
+      }),
+      createdAt: new Date().toISOString(),
+    };
+    
+    // 폼 데이터 저장
+    sessionStorage.setItem(APPLICATION_FORM_SESSION_KEY, JSON.stringify({
+      id: tempFormId, // ProgramCreatePage에서 이 ID를 보고 로드함
+      ...applicationFormData
+    }));
+    
+    console.log("신청폼 데이터 임시 저장 완료:", applicationFormData);
+    alert("신청폼이 생성되었습니다. 프로그램 등록 화면으로 돌아갑니다.");
+    
+    // ProgramCreatePage로 돌아가면서 폼 ID 전달 (URL 파라미터)
+    navigate(`/admin/dong/${dongName}/add?tempFormId=${tempFormId}`);
+  };
+
+  // 🚩 [수정]: 취소 버튼 클릭 시, 현재 폼 데이터도 임시 저장하고 ProgramCreatePage로 돌아가기
+  const handleCancel = () => {
+    const tempFormId = `temp_${Date.now()}`;
     const applicationFormData = {
       basicFields: formData,
       additionalFields: additionalFields,
       createdAt: new Date().toISOString(),
     };
     
-    // 생성된 폼 데이터를 sessionStorage에 임시 저장
-    const tempFormId = `temp_${Date.now()}`;
-    sessionStorage.setItem('tempApplicationForm', JSON.stringify({
+    // 현재 폼 작업 내용을 임시 저장
+    sessionStorage.setItem(APPLICATION_FORM_SESSION_KEY, JSON.stringify({
       id: tempFormId,
       ...applicationFormData
     }));
-    
-    console.log("생성된 신청폼 데이터:", applicationFormData);
-    alert("신청폼이 생성되었습니다.");
-    
-    // 프로그램 생성 페이지로 돌아가면서 폼 ID 전달
-    navigate(`/admin/dong/${dongName}/add?tempFormId=${tempFormId}`);
+
+    // ProgramCreatePage로 돌아갈 때, ProgramCreatePage에서 저장했던 프로그램 데이터는 지우지 않고,
+    // 현재 폼 데이터만 임시 저장한 채로 돌아갑니다.
+    navigate(`/admin/dong/${dongName}/add`);
   };
+
 
   return (
     <Container>
       <Header>
         <HeaderLeft>
-          <BackButton onClick={() => navigate(-1)}>
+          <BackButton onClick={handleCancel}> {/* navigate(-1) 대신 handleCancel 호출 */}
             <ArrowLeft />
           </BackButton>
           <DocumentIcon>
@@ -267,7 +314,7 @@ const ApplicationCreate = () => {
       </Content>
 
       <SubmitButtonWrapper>
-        <CancelButton type="button" onClick={() => navigate(-1)}>
+        <CancelButton type="button" onClick={handleCancel}>
           취소
         </CancelButton>
         <SubmitButton type="button" onClick={handleSubmit}>
@@ -279,6 +326,8 @@ const ApplicationCreate = () => {
 };
 
 export default ApplicationCreate;
+
+// 스타일 코드는 변경 없음
 
 const Container = styled.div`
   min-height: 100vh;

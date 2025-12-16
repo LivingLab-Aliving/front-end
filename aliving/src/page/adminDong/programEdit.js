@@ -35,57 +35,95 @@ const ProgramEditPage = () => {
         recruitmentLimit: '대전광역시 유성구민',
         instructor: '',
         attachment: null,
+        programImage: null,
         detailInfo: '',
     });
 
     // TODO: 실제 API 호출로 기존 프로그램 데이터 불러오기
     useEffect(() => {
         const programs = PROGRAMS_BY_DONG[dongName] || [];
-        const program = programs.find(p => p.id === programId);
+        
+        // localStorage에서 추가된 프로그램들도 가져오기
+        const localPrograms = JSON.parse(localStorage.getItem('programs') || '{}');
+        const localDongPrograms = localPrograms[dongName] || [];
+        
+        // 기존 데이터와 localStorage 데이터 합치기
+        const allPrograms = [...programs, ...localDongPrograms];
+        const program = allPrograms.find(p => p.id === programId);
         
         if (program) {
-            // capacity에서 숫자만 추출
-            const capacityMatch = program.capacity?.match(/(\d+)명$/);
-            const capacityNumber = capacityMatch ? capacityMatch[1] : '';
-            
-            // tuition에서 숫자만 추출
-            const tuitionMatch = program.tuition?.match(/^([\d,]+)원/);
-            const tuitionNumber = tuitionMatch ? tuitionMatch[1].replace(/,/g, '') : '';
-            
-            setFormData({
-                programName: program.title || '',
-                scheduleStartHour: '10',
-                scheduleStartMinute: '00',
-                scheduleEndHour: '12',
-                scheduleEndMinute: '00',
-                quarter: program.quarter || '',
-                educationPeriodStart: program.startDate || '',
-                educationPeriodEnd: program.endDate || '',
-                recruitmentPeriodStart: program.startDate || '',
-                recruitmentPeriodStartHour: '09',
-                recruitmentPeriodStartMinute: '00',
-                recruitmentPeriodEnd: program.endDate || '',
-                recruitmentPeriodEndHour: '18',
-                recruitmentPeriodEndMinute: '00',
-                location: program.place || '',
-                category: program.class || '',
-                capacity: capacityNumber,
-                fee: tuitionNumber,
-                materials: program.materials || '',
-                institution: program.organization || dongName,
-                recruitmentLimit: '대전광역시 유성구민',
-                instructor: program.instructor?.name || '',
-                attachment: program.attachment || null,
-                detailInfo: program.detailInfo || '',
-            });
+            // localStorage에서 온 프로그램인지 확인 (originalData가 있으면 localStorage 데이터)
+            if (program.originalData) {
+                // localStorage 데이터는 originalData에서 가져오기
+                const originalData = program.originalData;
+                setFormData({
+                    programName: originalData.programName || '',
+                    scheduleStartHour: originalData.scheduleStartHour || '10',
+                    scheduleStartMinute: originalData.scheduleStartMinute || '00',
+                    scheduleEndHour: originalData.scheduleEndHour || '12',
+                    scheduleEndMinute: originalData.scheduleEndMinute || '00',
+                    quarter: originalData.quarter || '',
+                    educationPeriodStart: originalData.educationPeriodStart || '',
+                    educationPeriodEnd: originalData.educationPeriodEnd || '',
+                    recruitmentPeriodStart: originalData.recruitmentPeriodStart || '',
+                    recruitmentPeriodStartHour: originalData.recruitmentPeriodStartHour || '09',
+                    recruitmentPeriodStartMinute: originalData.recruitmentPeriodStartMinute || '00',
+                    recruitmentPeriodEnd: originalData.recruitmentPeriodEnd || '',
+                    recruitmentPeriodEndHour: originalData.recruitmentPeriodEndHour || '18',
+                    recruitmentPeriodEndMinute: originalData.recruitmentPeriodEndMinute || '00',
+                    location: originalData.location || '',
+                    category: originalData.category || '',
+                    capacity: originalData.capacity || '',
+                    fee: originalData.fee || '',
+                    materials: originalData.materials || '',
+                    institution: originalData.institution || dongName,
+                    recruitmentLimit: originalData.recruitmentLimit || '대전광역시 유성구민',
+                    instructor: originalData.instructor || '',
+                    attachment: originalData.attachment || null,
+                    programImage: originalData.programImage || null,
+                    detailInfo: originalData.detailInfo || '',
+                });
+            } else {
+                // 기존 하드코딩된 데이터 처리
+                // capacity에서 숫자만 추출
+                const capacityMatch = program.recruitment?.match(/(\d+)명/);
+                const capacityNumber = capacityMatch ? capacityMatch[1] : '';
+                
+                // tuition에서 숫자만 추출
+                const tuitionMatch = program.tuition?.match(/^([\d,]+)원/);
+                const tuitionNumber = tuitionMatch ? tuitionMatch[1].replace(/,/g, '') : '';
+                
+                setFormData({
+                    programName: program.title || '',
+                    scheduleStartHour: '10',
+                    scheduleStartMinute: '00',
+                    scheduleEndHour: '12',
+                    scheduleEndMinute: '00',
+                    quarter: program.quarter?.replace('분기', '') || '',
+                    educationPeriodStart: program.startDate || '',
+                    educationPeriodEnd: program.endDate || '',
+                    recruitmentPeriodStart: program.startDate || '',
+                    recruitmentPeriodStartHour: '09',
+                    recruitmentPeriodStartMinute: '00',
+                    recruitmentPeriodEnd: program.endDate || '',
+                    recruitmentPeriodEndHour: '18',
+                    recruitmentPeriodEndMinute: '00',
+                    location: program.place || '',
+                    category: program.class || '',
+                    capacity: capacityNumber,
+                    fee: tuitionNumber,
+                    materials: program.materials || '',
+                    institution: program.organization || dongName,
+                    recruitmentLimit: '대전광역시 유성구민',
+                    instructor: program.instructor?.name || '',
+                    attachment: program.attachment || null,
+                    programImage: program.programImage || null,
+                    detailInfo: program.detailInfo || '',
+                });
+            }
             
             console.log("불러온 프로그램 데이터:", program);
-            console.log("매핑된 폼 데이터:", {
-                capacity: capacityNumber,
-                fee: tuitionNumber,
-                attachment: program.attachment,
-                detailInfo: program.detailInfo
-            });
+            console.log("localStorage 데이터 여부:", !!program.originalData);
         }
     }, [dongName, programId]);
 
@@ -104,6 +142,32 @@ const ProgramEditPage = () => {
         }));
     };
 
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                setFormData(prev => ({
+                    ...prev,
+                    programImage: event.target.result
+                }));
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleImageRemove = () => {
+        setFormData(prev => ({
+            ...prev,
+            programImage: null
+        }));
+        // 파일 input 초기화
+        const fileInput = document.getElementById('programImage');
+        if (fileInput) {
+            fileInput.value = '';
+        }
+    };
+
     const handleEditApplicationForm = () => {
         navigate(`/admin/dong/${dongName}/application-form-edit?programId=${programId}`);
     };
@@ -111,13 +175,66 @@ const ProgramEditPage = () => {
     const handleSubmit = (e) => {
         e.preventDefault();
         
-        // TODO: 실제 API 호출로 프로그램 수정 저장
+        // localStorage에서 프로그램 업데이트
+        const localPrograms = JSON.parse(localStorage.getItem('programs') || '{}');
+        if (localPrograms[dongName]) {
+            const programIndex = localPrograms[dongName].findIndex(p => p.id === programId);
+            if (programIndex !== -1) {
+                // 기존 데이터 구조에 맞게 변환하여 업데이트
+                const updatedProgram = {
+                    id: programId,
+                    title: formData.programName,
+                    type: "자치동 프로그램",
+                    class: formData.category || "정규강좌",
+                    place: formData.location,
+                    tuition: formData.fee ? `${formData.fee}원` : "무료",
+                    recruitment: `모집인원 ${formData.capacity}명`,
+                    startDate: formData.educationPeriodStart,
+                    endDate: formData.educationPeriodEnd,
+                    schedule: `${formData.scheduleStartHour}:${formData.scheduleStartMinute}~${formData.scheduleEndHour}:${formData.scheduleEndMinute}`,
+                    quarter: formData.quarter,
+                    organization: formData.institution,
+                    targetAudience: "성인",
+                    instructor: {
+                        name: formData.instructor || "미정",
+                    },
+                    programImage: formData.programImage, // 프로그램 이미지 추가
+                    // 원본 데이터도 업데이트
+                    originalData: formData,
+                };
+                
+                localPrograms[dongName][programIndex] = updatedProgram;
+                localStorage.setItem('programs', JSON.stringify(localPrograms));
+                console.log("프로그램 수정 완료:", updatedProgram);
+            }
+        }
         
-        navigate(`/admin/dong/${dongName}/success`);
+        navigate(`/admin/dong/${dongName}`);
     };
 
     const handleCancel = () => {
         navigate(`/admin/dong/${dongName}`);
+    };
+
+    const handleDelete = () => {
+        if (window.confirm('정말로 이 프로그램을 삭제하시겠습니까?')) {
+            // localStorage에서 프로그램 삭제
+            const localPrograms = JSON.parse(localStorage.getItem('programs') || '{}');
+            if (localPrograms[dongName]) {
+                const programIndex = localPrograms[dongName].findIndex(p => p.id === programId);
+                if (programIndex !== -1) {
+                    localPrograms[dongName].splice(programIndex, 1);
+                    localStorage.setItem('programs', JSON.stringify(localPrograms));
+                    console.log("프로그램 삭제 완료:", programId);
+                    alert('프로그램이 삭제되었습니다.');
+                    navigate(`/admin/dong/${dongName}`);
+                } else {
+                    alert('삭제할 수 없는 프로그램입니다. (기본 데이터)');
+                }
+            } else {
+                alert('삭제할 수 없는 프로그램입니다. (기본 데이터)');
+            }
+        }
     };
 
     const handleDuplicateCheck = () => {
@@ -225,10 +342,10 @@ const ProgramEditPage = () => {
                                     onChange={handleChange}
                                 >
                                     <option value="">선택</option>
-                                    <option value="1분기">1분기</option>
-                                    <option value="2분기">2분기</option>
-                                    <option value="3분기">3분기</option>
-                                    <option value="4분기">4분기</option>
+                                    <option value="1분기">1</option>
+                                    <option value="2분기">2</option>
+                                    <option value="3분기">3</option>
+                                    <option value="4분기">4</option>
                                 </Select>
                             </FieldValue>
                         </TableRow>
@@ -471,6 +588,33 @@ const ProgramEditPage = () => {
                         </TableRow>
 
                         <TableRow>
+                            <FieldLabel>프로그램 이미지</FieldLabel>
+                            <FieldValue>
+                                <ImageUploadWrapper>
+                                    <FileInput
+                                        id="programImage"
+                                        name="programImage"
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleImageChange}
+                                    />
+                                    {formData.programImage && (
+                                        <ImagePreview>
+                                            <img src={formData.programImage} alt="프로그램 이미지 미리보기" />
+                                            <ImageRemoveButton 
+                                                type="button" 
+                                                onClick={handleImageRemove}
+                                                title="이미지 제거"
+                                            >
+                                                ×
+                                            </ImageRemoveButton>
+                                        </ImagePreview>
+                                    )}
+                                </ImageUploadWrapper>
+                            </FieldValue>
+                        </TableRow>
+
+                        <TableRow>
                             <FieldLabel>상세정보입력</FieldLabel>
                             <WideFieldValue>
                                 <Textarea
@@ -486,8 +630,11 @@ const ProgramEditPage = () => {
                     </Section>
 
                     <ButtonGroup>
-                        <CancelButton type="button" onClick={handleCancel}>취소</CancelButton>
-                        <SubmitButton type="submit">프로그램 수정하기</SubmitButton>
+                        <DeleteButton type="button" onClick={handleDelete}>제거하기</DeleteButton>
+                        <ButtonRightGroup>
+                            <CancelButton type="button" onClick={handleCancel}>취소</CancelButton>
+                            <SubmitButton type="submit">프로그램 수정하기</SubmitButton>
+                        </ButtonRightGroup>
                     </ButtonGroup>
                 </Form>
             </Inner>
@@ -765,9 +912,14 @@ const Textarea = styled.textarea`
 
 const ButtonGroup = styled.div`
   display: flex;
-  justify-content: flex-end;
-  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
   margin-top: 16px;
+`;
+
+const ButtonRightGroup = styled.div`
+  display: flex;
+  gap: 12px;
 `;
 
 const BaseButton = styled.button`
@@ -802,6 +954,18 @@ const CancelButton = styled(BaseButton)`
   }
 `;
 
+const DeleteButton = styled(BaseButton)`
+  background: #dc3545;
+  color: white;
+  border-color: #dc3545;
+  font-family: "Pretendard", sans-serif;
+
+  &:hover {
+    background: #c82333;
+    border-color: #bd2130;
+  }
+`;
+
 const CapacityWrapper = styled.div`
   display: flex;
   align-items: center;
@@ -824,5 +988,53 @@ const ApplicationFormButton = styled.button`
 
   &:hover {
     background: #1248a0;
+  }
+`;
+const ImageUploadWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const ImagePreview = styled.div`
+  width: 200px;
+  height: 150px;
+  border: 1px solid #d0d0d0;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9fa;
+  position: relative;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+`;
+
+const ImageRemoveButton = styled.button`
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 0, 0, 0.8);
+    transform: scale(1.1);
   }
 `;

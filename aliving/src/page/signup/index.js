@@ -27,6 +27,7 @@ const SignupPage = () => {
     if (step === 1 && agreeAll) {
       setStep(2);
     } else if (step === 2) {
+      // Step 2에서 '가입하기' 버튼 대신 다음 단계로 넘어갈 때 사용됨 (현재 코드 흐름상 사용 안됨)
       setStep(3);
     }
   };
@@ -46,6 +47,12 @@ const SignupPage = () => {
   };
 
   const handleSubmit = () => {
+    // 실제로는 여기서 API 호출을 통해 회원가입 데이터를 전송합니다.
+    
+    // ✅ 로직 추가: 일반 사용자 가입이므로 isAdminLoggedIn을 'false'로 설정
+    localStorage.setItem("isAdminLoggedIn", "false");
+    
+    // 다음 단계(가입 완료 페이지)로 이동
     setStep(3);
   };
 
@@ -454,6 +461,8 @@ const SignupPage = () => {
 };
 
 export default SignupPage;
+
+// 스타일 컴포넌트 코드는 변경 없이 그대로 유지됩니다.
 
 const Container = styled.div`
   flex: 1;
