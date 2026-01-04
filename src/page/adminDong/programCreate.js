@@ -86,6 +86,8 @@ const ProgramCreatePage = () => {
         
         try {
             const adminId = localStorage.getItem("adminId");
+
+            console.log(formData);
             
             const programDto = {
                 programName: formData.programName,
@@ -100,7 +102,9 @@ const ProgramCreatePage = () => {
                 eduPrice: parseInt(formData.fee) || 0,
                 description: formData.detailInfo,
                 institution: formData.institution,
-                needs: formData.materials,
+                instructorName: formData.instructor, 
+                needs: formData.materials, 
+                
                 regionRestriction: "YUSEONG", 
                 programType: "AUTONOMOUS", 
                 additionalFields: applicationFormData?.additionalFields || []

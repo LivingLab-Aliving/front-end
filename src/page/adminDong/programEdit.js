@@ -9,6 +9,7 @@ const ProgramEditPage = () => {
     const navigate = useNavigate();
     
     const [isDuplicateChecked, setIsDuplicateChecked] = useState(true); // 수정 시엔 이미 이름이 있으므로 true
+    const [previewUrl, setPreviewUrl] = useState(null);
     
     const [formData, setFormData] = useState({
         programName: '',
@@ -32,26 +33,23 @@ const ProgramEditPage = () => {
         materials: '',
         institution: dongName,
         recruitmentLimit: '대전광역시 유성구민',
-        instructor: '',
+        instructor: '', // 🌟 강사명 필드
+        instructorId: null, // 🌟 강사 ID 필드 (백엔드 전송용)
         attachment: null,
         detailInfo: '',
     });
 
-    // 1. 🌟 실제 백엔드 API 호출로 기존 데이터 불러오기
     useEffect(() => {
         const fetchProgramData = async () => {
             try {
-                // 백엔드의 상세 조회 API 호출
                 const response = await axios.get(`http://localhost:8080/api/program/${programId}`);
                 const data = response.data.data;
 
                 if (data) {
-                    // eduTime 분리 (예: "10:00 ~ 12:00")
                     const timeRange = data.eduTime ? data.eduTime.split(' ~ ') : ['10:00', '12:00'];
                     const startTime = timeRange[0].split(':');
                     const endTime = timeRange[1].split(':');
 
-                    // recruitStartDate 분리 (예: "2026-01-01T09:00:00")
                     const rStart = data.recruitStartDate ? data.recruitStartDate.split('T') : ['', '09:00'];
                     const rEnd = data.recruitEndDate ? data.recruitEndDate.split('T') : ['', '18:00'];
 
@@ -71,23 +69,26 @@ const ProgramEditPage = () => {
                         recruitmentPeriodEndHour: rEnd[1].split(':')[0],
                         recruitmentPeriodEndMinute: rEnd[1].split(':')[1],
                         location: data.eduPlace || '',
-                        category: data.programType === 'AUTONOMOUS' ? '정규강좌' : '특별', // 매핑 필요
+                        category: data.programType === 'AUTONOMOUS' ? '정규강좌' : '특별',
                         capacity: data.capacity || '',
                         fee: data.eduPrice || '',
-                        materials: data.needs || '',
+                        materials: data.needs || data.materials ||'',
                         institution: data.institution || dongName,
                         recruitmentLimit: data.regionRestriction || '대전광역시 유성구민',
-                        instructor: data.instructorName || '',
-                        attachment: null, // 파일은 보안상 가져올 수 없으므로 null
+                        instructor: data.instructorName || (data.instructor ? data.instructor.name : ''),
+                        instructorId: data.instructorId || null,
+                        
+                        attachment: null,
                         detailInfo: data.description || '',
                     });
+                    setPreviewUrl(data.thumbnailUrl);
+
+                    console.log(data)
                 }
             } catch (error) {
-                console.error("프로그램 데이터 로드 실패:", error);
-                alert("데이터를 불러오는데 실패했습니다.");
+                console.error("데이터 로드 실패:", error);
             }
         };
-
         if (programId) fetchProgramData();
     }, [programId, dongName]);
 
@@ -97,16 +98,18 @@ const ProgramEditPage = () => {
     };
 
     const handleFileChange = (e) => {
-        setFormData(prev => ({ ...prev, attachment: e.target.files[0] }));
+        const file = e.target.files[0];
+        setFormData(prev => ({ ...prev, attachment: file }));
+        // 🌟 4. 새 파일 선택 시 미리보기 업데이트
+        if (file) {
+            setPreviewUrl(URL.createObjectURL(file));
+        }
     };
 
-    // 2. 🌟 수정 제출 로직 (Multipart/form-data)
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
         try {
             const adminId = localStorage.getItem("adminId");
-            
             const updateDto = {
                 programName: formData.programName,
                 eduTime: `${formData.scheduleStartHour}:${formData.scheduleStartMinute} ~ ${formData.scheduleEndHour}:${formData.scheduleEndMinute}`,
@@ -119,9 +122,10 @@ const ProgramEditPage = () => {
                 capacity: parseInt(formData.capacity),
                 eduPrice: parseInt(formData.fee),
                 description: formData.detailInfo,
-                institutionName: formData.institution,
-                needs: formData.materials
-                // 추가 필드(신청폼)는 ApplicationEdit에서 별도로 처리하거나 여기에 포함
+                institution: formData.institution,
+                needs: formData.materials,
+                instructorId: formData.instructorId, // 🌟 ID 전송 확인
+                programType: formData.category === '정규강좌' ? 'AUTONOMOUS' : 'YUSEONG'
             };
 
             const sendData = new FormData();
@@ -131,7 +135,6 @@ const ProgramEditPage = () => {
             }
 
             await axios.put(`http://localhost:8080/api/program/${programId}?adminId=${adminId}`, sendData);
-            
             alert("수정이 완료되었습니다.");
             navigate(`/admin/dong/${dongName}`);
         } catch (error) {
@@ -476,7 +479,6 @@ const ProgramEditPage = () => {
                             <FieldLabel>강사명</FieldLabel>
                             <FieldValue>
                                 <Input
-                                    id="instructor"
                                     name="instructor"
                                     type="text"
                                     value={formData.instructor}
@@ -486,14 +488,18 @@ const ProgramEditPage = () => {
                         </TableRow>
 
                         <TableRow>
-                            <FieldLabel>첨부파일</FieldLabel>
+                            <FieldLabel>이미지</FieldLabel>
                             <FieldValue>
-                                <FileInput
-                                    id="attachment"
-                                    name="attachment"
-                                    type="file"
-                                    onChange={handleFileChange}
-                                />
+                                <ImagePreviewWrapper>
+                                    {previewUrl && <img src={previewUrl} alt="미리보기" />}
+                                    <FileInput
+                                        type="file"
+                                        onChange={handleFileChange}
+                                    />
+                                </ImagePreviewWrapper>
+                                <p style={{fontSize: '12px', color: '#888', marginTop: '8px'}}>
+                                    * 새로운 파일을 선택하면 기존 이미지가 교체됩니다.
+                                </p>
                             </FieldValue>
                         </TableRow>
 
@@ -501,7 +507,6 @@ const ProgramEditPage = () => {
                             <FieldLabel>상세정보입력</FieldLabel>
                             <WideFieldValue>
                                 <Textarea
-                                    id="detailInfo"
                                     name="detailInfo"
                                     rows={8}
                                     placeholder="프로그램에 대한 상세 정보를 입력하세요"
@@ -513,7 +518,7 @@ const ProgramEditPage = () => {
                     </Section>
 
                     <ButtonGroup>
-                        <CancelButton type="button" onClick={handleCancel}>취소</CancelButton>
+                        <CancelButton type="button" onClick={() => navigate(-1)}>취소</CancelButton>
                         <SubmitButton type="submit">프로그램 수정하기</SubmitButton>
                     </ButtonGroup>
                 </Form>
@@ -523,6 +528,19 @@ const ProgramEditPage = () => {
 };
 
 export default ProgramEditPage;
+
+const ImagePreviewWrapper = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    img {
+        width: 200px;
+        height: 150px;
+        object-fit: cover;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+    }
+`;
 
 const PageContainer = styled.section`
   display: flex;

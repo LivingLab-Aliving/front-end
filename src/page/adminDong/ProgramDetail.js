@@ -1,150 +1,63 @@
-// src/page/adminDong/ProgramDetail.js
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
+import axios from 'axios';
 import { ReactComponent as DeleteIcon } from '../../assets/icon/delete.svg';
 import { ReactComponent as SearchIcon } from '../../assets/icon/_search.svg';
 import { ReactComponent as DownloadIcon } from '../../assets/icon/download.svg';
 import { ReactComponent as GroupAddIcon } from '../../assets/icon/group_add.svg';
 import { PROGRAMS_BY_DONG } from '../../assets/data/data';
+import { formatPeriod } from '../../util/utils';
 
 const AdminProgramDetail = () => {
   const { dongName, programId } = useParams();
   const navigate = useNavigate();
+  
   const [program, setProgram] = useState(null);
+  const [applications, setApplications] = useState([]);
   const [activeTab, setActiveTab] = useState('info');
+  const [loading, setLoading] = useState(true);
+  
   const [selectedItems, setSelectedItems] = useState(new Set());
   const [selectAll, setSelectAll] = useState(false);
-  const [applications, setApplications] = useState([]);
 
   // TODO: 실제 API 호출로 프로그램 데이터 가져오기
   useEffect(() => {
-    const programs = PROGRAMS_BY_DONG[dongName] || [];
-    const foundProgram = programs.find(p => p.id === programId);
-    setProgram(foundProgram);
-  }, [dongName, programId]);
+    const fetchProgramDetail = async () => {
+      // programId가 없거나 문자열 'undefined'인 경우 방어
+      if (!programId || programId === 'undefined') {
+        setLoading(false);
+        return;
+      }
 
-  // TODO: 실제 API 호출로 프로그램 신청자 데이터 가져오기
+      try {
+        setLoading(true);
+        const response = await axios.get(`http://localhost:8080/api/program/${programId}`);
+        setProgram(response.data.data);
+      } catch (error) {
+        console.error("프로그램 로드 실패:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProgramDetail();
+  }, [programId]);
+
   useEffect(() => {
-    const mockApplications = [
-    { 
-      id: 1, 
-      name: '유소영', 
-      userId: 'yusoyoung123', 
-      address: '대전광역시 유성구 학하동 144', 
-      phone: '010-1234-5678', 
-      email: 'yusoyoung123@gmail.com', 
-      birthDate: '1999.03.10', 
-      discount: '-', 
-      courseType: '재수강' 
-    },
-    { 
-      id: 2, 
-      name: '이소연', 
-      userId: 'yusoyoung234', 
-      address: '대전광역시 유성구 원신흥동 125', 
-      phone: '010-1234-5678', 
-      email: 'yusoyoung123@naver.com', 
-      birthDate: '1999.03.10', 
-      discount: '-', 
-      courseType: '재수강' 
-    },
-    { 
-      id: 3, 
-      name: '이혜순', 
-      userId: 'yusoyoung245', 
-      address: '대전광역시 유성구 학하동 1차 178', 
-      phone: '010-1234-5678', 
-      email: 'yusoeng@naver.com', 
-      birthDate: '1999.03.10', 
-      discount: '-', 
-      courseType: '재수강' 
-    },
-    { 
-      id: 4, 
-      name: '곽수은', 
-      userId: 'yuseong1', 
-      address: '대전광역시 유성구 원신흥동 125', 
-      phone: '010-1234-5678', 
-      email: 'yuseong10@naver.com', 
-      birthDate: '1999.03.10', 
-      discount: '경비가족할인', 
-      courseType: '신규' 
-    },
-    { 
-      id: 5, 
-      name: '박현희', 
-      userId: 'yuseong12', 
-      address: '대전광역시 유성구 학하동 1차 117', 
-      phone: '010-1234-5678', 
-      email: 'daegeon123@gmail.com', 
-      birthDate: '1999.03.10', 
-      discount: '-', 
-      courseType: '재수강' 
-    },
-    { 
-      id: 6, 
-      name: '최도은', 
-      userId: 'yuseong13', 
-      address: '대전광역시 유성구 학하동 2차 60', 
-      phone: '010-1234-5678', 
-      email: 'daegeon567@gmail.com', 
-      birthDate: '1999.03.10', 
-      discount: '-', 
-      courseType: '신규' 
-    },
-    { 
-      id: 7, 
-      name: '손다빈', 
-      userId: 'yDaeong', 
-      address: '대전광역시 유성구 학하동 1차 178', 
-      phone: '010-1234-5678', 
-      email: 'yuseong123@naver.com', 
-      birthDate: '1999.03.10', 
-      discount: '-', 
-      courseType: '신규' 
-    },
-    { 
-      id: 8, 
-      name: '최태인', 
-      userId: 'yDaeong', 
-      address: '대전광역시 유성구 학하동 144', 
-      phone: '010-1234-5678', 
-      email: 'yun04410@naver.com', 
-      birthDate: '1999.03.10', 
-      discount: '경비가족할인', 
-      courseType: '신규' 
-    },
-    { 
-      id: 9, 
-      name: '정현진', 
-      userId: 'yDaeong34', 
-      address: '대전광역시 유성구 원신흥동 125', 
-      phone: '010-1234-5678', 
-      email: 'daegeon567@gmail.com', 
-      birthDate: '1999.03.10', 
-      discount: '-', 
-      courseType: '재수강' 
-    },
-    { 
-      id: 10, 
-      name: '조현미', 
-      userId: 'yDaeong56', 
-      address: '대전광역시 유성구 학하동 1차 168', 
-      phone: '010-1234-5678', 
-      email: 'yuseong@naver.com', 
-      birthDate: '1999.03.10', 
-      discount: '-', 
-      courseType: '재수강' 
-    }
-  ];
-    setApplications(mockApplications);
-  }, []);
+    const fetchApplications = async () => {
+      if (activeTab === 'applications' && programId && programId !== 'undefined') {
+        try {
+          const response = await axios.get(`http://localhost:8080/api/program/${programId}/applications/admin`);
+          setApplications(response.data.data || []);
+        } catch (error) {
+          console.error("신청자 목록 로드 실패:", error);
+        }
+      }
+    };
+    fetchApplications();
+  }, [programId, activeTab]);
 
-  if (!program) {
-    return <Container>프로그램을 찾을 수 없습니다.</Container>;
-  }
+  if (loading) return <Container>데이터를 불러오는 중입니다...</Container>;
 
   const handleBack = () => {
     navigate(`/admin/dong/${dongName}`);
@@ -159,8 +72,6 @@ const AdminProgramDetail = () => {
   };
 
 
-
-  // 체크박스 핸들러
   const handleSelectAll = (checked) => {
     setSelectAll(checked);
     if (checked) {
@@ -202,13 +113,8 @@ const AdminProgramDetail = () => {
     }
   };
 
-  // 프로그램 정보에서 인원 데이터 파싱 
-  const capacityInfo = program.capacity || '22명 / 25명';
-  const [currentApplicants, maxCapacity] = capacityInfo.split(' / ').map(str => parseInt(str.replace('명', '')));
-  
-  // 통계 계산 (실제 신청자 데이터 기준)
-  const totalCount = currentApplicants; // 프로그램 상세의 신청인원과 동일
-  const maxCount = maxCapacity; // 모집인원
+  const totalCount = applications.length;
+  const maxCount = program.capacity || 0;
   const newCount = applications.filter(app => app.courseType === '신규').length;
   const returnCount = applications.filter(app => app.courseType === '재수강').length;
   const discountCount = applications.filter(app => app.discount !== '-').length;
@@ -219,12 +125,12 @@ const AdminProgramDetail = () => {
         <BackButton onClick={handleBack}>←</BackButton>
         <HeaderInfo>
           <ProgramId>{program.id}</ProgramId>
-          <ProgramTitle>{program.title}</ProgramTitle>
-          <ProgramType>{program.type}</ProgramType>
+          <ProgramTitle>{program.programName}</ProgramTitle>
+          <ProgramType>{program.programType === 'AUTONOMOUS' ? '자치형' : '유성형'}</ProgramType>
         </HeaderInfo>
         <StatusInfo>
           <StatusLabel>모집상태</StatusLabel>
-          <StatusDate>{program.applicationPeriod || '2025.08.01 ~ 생성'}</StatusDate>
+          <StatusDate>{formatPeriod(program.recruitStartDate, program.recruitEndDate)}</StatusDate>
         </StatusInfo>
         <MenuButton onClick={handleEditProgram}>⋮</MenuButton>
       </Header>
@@ -248,8 +154,10 @@ const AdminProgramDetail = () => {
             <InstructorSection>
               <InstructorAvatar />
               <InstructorInfo>
-                <InstructorName>{program.instructor?.name || '강사명'}</InstructorName>
-                <InstructorRole>{program.instructor?.role || '강사 소개'}</InstructorRole>
+                <InstructorName>
+                  {program.instructorName || program.instructor?.name || '강사 정보 없음'}
+                </InstructorName>
+                <InstructorRole>{program.institution || '소속 정보 없음'}</InstructorRole>
               </InstructorInfo>
             </InstructorSection>
 
@@ -264,46 +172,12 @@ const AdminProgramDetail = () => {
           <RightSection>
             <InfoTable>
               <tbody>
-                <InfoRow>
-                  <InfoLabel>교육일정</InfoLabel>
-                  <InfoValue>{program.schedule || '월, 수 10:00~12:00'}</InfoValue>
-                </InfoRow>
-                <InfoRow>
-                  <InfoLabel>분기</InfoLabel>
-                  <InfoValue>{program.quarter || '2025년 4분기'}</InfoValue>
-                </InfoRow>
-                <InfoRow>
-                  <InfoLabel>교육기간</InfoLabel>
-                  <InfoValue>{`${program.startDate} ~ ${program.endDate}`}</InfoValue>
-                </InfoRow>
-                <InfoRow>
-                  <InfoLabel>모집기간</InfoLabel>
-                  <InfoValue>{program.applicationPeriod || `${program.startDate} ~ ${program.endDate}`}</InfoValue>
-                </InfoRow>
-                <InfoRow>
-                  <InfoLabel>교육장소</InfoLabel>
-                  <InfoValue>{program.place}</InfoValue>
-                </InfoRow>
-                <InfoRow>
-                  <InfoLabel>신청인원 / 모집인원</InfoLabel>
-                  <InfoValue>{program.capacity || '22명 / 25명'}</InfoValue>
-                </InfoRow>
-                <InfoRow>
-                  <InfoLabel>교육대상</InfoLabel>
-                  <InfoValue>{program.targetAudience || '성인'}</InfoValue>
-                </InfoRow>
-                <InfoRow>
-                  <InfoLabel>수강료</InfoLabel>
-                  <InfoValue>{program.tuition}</InfoValue>
-                </InfoRow>
-                <InfoRow>
-                  <InfoLabel>학습자준비물</InfoLabel>
-                  <InfoValue>{program.materials || '물감, 워터브러쉬, 수채화용지'}</InfoValue>
-                </InfoRow>
-                <InfoRow>
-                  <InfoLabel>교육기관 / 모집제한</InfoLabel>
-                  <InfoValue>{program.institution || `${dongName} / 대전광역시 유성구민`}</InfoValue>
-                </InfoRow>
+                <InfoRow><InfoLabel>교육일정</InfoLabel><InfoValue>{program.eduTime}</InfoValue></InfoRow>
+                <InfoRow><InfoLabel>교육기간</InfoLabel><InfoValue>{formatPeriod(program.eduStartDate, program.eduEndDate)}</InfoValue></InfoRow>
+                <InfoRow><InfoLabel>교육장소</InfoLabel><InfoValue>{program.eduPlace}</InfoValue></InfoRow>
+                <InfoRow><InfoLabel>수강료</InfoLabel><InfoValue>{program.eduPrice.toLocaleString()}원</InfoValue></InfoRow>
+                <InfoRow><InfoLabel>신청/모집인원</InfoLabel><InfoValue>{totalCount}명 / {maxCount}명</InfoValue></InfoRow>
+                <InfoRow><InfoLabel>학습자준비물</InfoLabel><InfoValue>{program.needs || '없음'}</InfoValue></InfoRow>
               </tbody>
             </InfoTable>
           </RightSection>
@@ -376,28 +250,20 @@ const AdminProgramDetail = () => {
               </thead>
               <tbody>
                 {applications.map((app, index) => (
-                  <TableRow key={app.id}>
-                    <TableCell>
-                      <Checkbox 
-                        type="checkbox" 
-                        checked={selectedItems.has(app.id)}
-                        onChange={(e) => handleSelectItem(app.id, e.target.checked)}
-                      />
-                    </TableCell>
-                    <TableCell>{index + 1}</TableCell>
-                    <TableCell>{app.name}</TableCell>
-                    <TableCell>{app.userId}</TableCell>
-                    <TableCell>{app.address}</TableCell>
-                    <TableCell>{app.phone}</TableCell>
-                    <TableCell>{app.email}</TableCell>
-                    <TableCell>{app.birthDate}</TableCell>
-                    <TableCell>{app.discount}</TableCell>
-                    <TableCell>
-                      <CourseTypeBadge $type={app.courseType}>
-                        {app.courseType}
-                      </CourseTypeBadge>
-                    </TableCell>
-                  </TableRow>
+                  <TableRow key={app.applicationId}>
+                  <TableCell>{index + 1}</TableCell>
+                  <TableCell>{app.userName}</TableCell>
+                  <TableCell>{app.phone}</TableCell>
+                  <TableCell>{app.address}</TableCell>
+                  <TableCell>
+                    {app.answers && app.answers.map((ans, idx) => (
+                      <div key={idx} style={{fontSize: '12px', marginBottom: '2px'}}>
+                        <strong>{ans.label}:</strong> {ans.answer}
+                      </div>
+                    ))}
+                  </TableCell>
+                  <TableCell>{app.createdAt.split('T')[0]}</TableCell>
+                </TableRow>
                 ))}
               </tbody>
             </ApplicationsTable>
