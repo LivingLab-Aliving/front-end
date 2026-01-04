@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { PROGRAMS_BY_DONG, PROGRAM_TYPES } from '../../assets/data/data';
 import { formatPeriod, calculateDaysRemaining } from '../../util/utils';
+import axios from "axios";
 
 const DongPage = () => {
   const { dongName } = useParams();
@@ -17,12 +18,49 @@ const DongPage = () => {
   const [sortBy, setSortBy] = useState('');
   const itemsPerPage = 6;
 
-  // TODO: 실제 API 호출로 프로그램 목록 가져오기
   useEffect(() => {
-    const dongPrograms = PROGRAMS_BY_DONG[dongName] || [];
-    setPrograms(dongPrograms);
-    setFilteredPrograms(dongPrograms);
-    setCurrentPage(1);
+    const fetchPrograms = async () => {
+      try {
+        const adminId = localStorage.getItem("adminId");
+        
+        const response = await axios.get(`http://localhost:8080/api/program`, {
+          params: {
+            dongName: dongName,
+            adminId: adminId 
+          }
+        });
+
+        console.log("백엔드 응답:", response.data);
+
+        if (response.data?.data?.content) {
+          const backendData = response.data.data.content;
+          
+          const mappedPrograms = backendData.map(p => ({
+            id: p.programId,
+            title: p.programName,
+            startDate: p.recruitStartDate,
+            endDate: p.recruitEndDate,
+            eduStartDate: p.eduStartDate,
+            eduEndDate: p.eduEndDate,
+            quarter: p.quarter ? `${p.quarter}분기` : "-",
+            class: p.programType === "AUTONOMOUS" ? "자치형" : "유성형",
+            instructor: { name: p.instructorName || "담당자" },
+            imageUrl: p.thumbnailUrl
+          }));
+
+          setPrograms(mappedPrograms);
+          setFilteredPrograms(mappedPrograms);
+        }
+      } catch (error) {
+        console.error("프로그램 목록 로드 실패:", error);
+        setPrograms([]);
+        setFilteredPrograms([]);
+      }
+    };
+
+    if (dongName) {
+      fetchPrograms();
+    }
   }, [dongName]);
 
   // 필터링 및 정렬 로직

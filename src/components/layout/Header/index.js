@@ -12,10 +12,11 @@ const Header = () => {
   useEffect(() => {
     const token = localStorage.getItem("token");
     const storedName = localStorage.getItem("username");
+    const userId = localStorage.getItem("userId");
 
     if (token) {
       setIsLoggedIn(true);
-      setUsername(storedName || "회원");
+      setUsername(storedName || "관리자");
     } else {
       setIsLoggedIn(false);
       setUsername("");
@@ -25,6 +26,7 @@ const Header = () => {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("username");
+    localStorage.removeItem("userId");
     setIsLoggedIn(false);
     setUsername("");
     navigate("/");

@@ -1,184 +1,104 @@
-import React, { useState, useMemo, useEffect } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
-import { PROGRAMS_BY_DONG } from "../../assets/data/data";
+import axios from "axios";
 import { formatPeriod } from "../../util/utils";
-import { getApplicationFormByProgram, saveApplicationForm } from "../../assets/data/applicationForms";
 
 const ApplicationEdit = () => {
-  const { dongName } = useParams();
+  const { dongName, programId } = useParams();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const programId = searchParams.get('programId');
 
-  // 모든 Hook을 먼저 호출
-  // TODO: 실제 API 호출로 프로그램 정보 가져오기
-  const program = useMemo(() => {
-    if (!programId) return null;
-    const dongPrograms = PROGRAMS_BY_DONG[dongName] || [];
-    return dongPrograms.find((p) => p.id === programId);
-  }, [dongName, programId]);
-
-  // 신청서 데이터 (빈 상태로 시작)
-  const [formData, setFormData] = useState({
-    name: "",
-    address: "",
-    contact: "",
-    birthDate: "",
-    email: "",
-  });
-
-  // 추가 필드 데이터 (신청폼 생성용)
+  const [program, setProgram] = useState(null);
   const [additionalFields, setAdditionalFields] = useState([]);
-  
-  // 신청폼 존재 여부 상태
-  const [hasApplicationForm, setHasApplicationForm] = useState(null); // null: 로딩중, true: 있음, false: 없음
+  const [hasApplicationForm, setHasApplicationForm] = useState(null);
 
-  // 기존 신청폼 불러오기 (필수)
+  // 1. 데이터 불러오기
   useEffect(() => {
-    if (!programId) {
-      setHasApplicationForm(false);
-      return;
-    }
-    
-    // TODO: 실제 API 호출로 기존 신청폼 데이터 가져오기
-    const existingForm = getApplicationFormByProgram(dongName, programId);
-    
-    if (existingForm) {
-      setFormData(existingForm.basicFields || {
-        name: "",
-        address: "",
-        contact: "",
-        birthDate: "",
-        email: "",
-      });
-      setAdditionalFields(existingForm.additionalFields || []);
-      setHasApplicationForm(true);
-      console.log("기존 신청폼 불러옴:", existingForm);
-    } else {
-      setHasApplicationForm(false);
-      console.log("기존 신청폼이 없습니다.");
-    }
-  }, [dongName, programId]);
+    const fetchData = async () => {
+      if (!programId) return;
+      try {
+        setHasApplicationForm(null);
+        // 프로그램 상세 정보
+        const programRes = await axios.get(`http://localhost:8080/api/program/${programId}`);
+        setProgram(programRes.data.data);
 
-  // programId가 없거나 신청폼이 없으면 에러 처리 (Hook 호출 후)
-  if (!programId) {
-    return (
-      <Container>
-        <ErrorMessage>프로그램 ID가 필요합니다.</ErrorMessage>
-        <ErrorBackButton onClick={() => navigate(-1)}>돌아가기</ErrorBackButton>
-      </Container>
-    );
-  }
+        // 신청폼 질문들
+        const formRes = await axios.get(`http://localhost:8080/api/program/${programId}/form`);
+        const existingFields = formRes.data.data;
 
-  // 신청폼 로딩 중
-  if (hasApplicationForm === null) {
-    return (
-      <Container>
-        <LoadingMessage>신청폼을 불러오는 중...</LoadingMessage>
-      </Container>
-    );
-  }
-
-  // 신청폼이 없는 경우
-  if (hasApplicationForm === false) {
-    return (
-      <Container>
-        <ErrorMessage>이 프로그램에는 신청폼이 없습니다.</ErrorMessage>
-        <ErrorDescription>
-          프로그램 생성 시 신청폼을 먼저 만들어야 합니다.
-        </ErrorDescription>
-        <ErrorBackButton onClick={() => navigate(-1)}>돌아가기</ErrorBackButton>
-      </Container>
-    );
-  }
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-
-
-  const handleAddField = () => {
-    const newField = {
-      id: Date.now(),
-      label: "",
-      type: "text",
-      required: false,
-      options: [],
+        if (existingFields && existingFields.length > 0) {
+          const formattedFields = existingFields.map(field => ({
+            id: field.id || Date.now() + Math.random(),
+            label: field.label,
+            type: field.type.toLowerCase(),
+            required: field.required,
+            options: field.options ? field.options.map(opt => ({ id: Math.random(), text: opt })) : []
+          }));
+          setAdditionalFields(formattedFields);
+          setHasApplicationForm(true);
+        } else {
+          setHasApplicationForm(false);
+        }
+      } catch (error) {
+        console.error("데이터 로드 실패:", error);
+        setHasApplicationForm(false);
+      }
     };
-    setAdditionalFields([...additionalFields, newField]);
+    fetchData();
+  }, [programId]);
+
+  // 2. 수정 완료 제출 (FormData 활용)
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const backendFormattedFields = additionalFields.map(field => ({
+      label: field.label,
+      type: field.type.toUpperCase(),
+      required: field.required,
+      options: field.type === 'radio' ? field.options.map(opt => opt.text) : []
+    }));
+
+    try {
+      const adminId = localStorage.getItem("adminId");
+
+      await axios.put(
+        `http://localhost:8080/api/program/${programId}/form`, 
+        backendFormattedFields, 
+        {
+          params: { adminId: adminId },
+          headers: { "Content-Type": "application/json" }
+        }
+      );
+
+      alert("신청폼 수정이 완료되었습니다.");
+      navigate(-1);
+    } catch (error) {
+      console.error("수정 실패:", error);
+      console.log(program);
+      alert("수정 실패: " + (error.response?.data?.message || "서버 오류"));
+    }
   };
 
+  // 질문 핸들러
+  const handleAddField = () => {
+    setAdditionalFields([...additionalFields, { id: Date.now(), label: "", type: "text", required: false, options: [] }]);
+  };
   const handleFieldChange = (id, field, value) => {
-    setAdditionalFields(prev => 
-      prev.map(item => 
-        item.id === id ? { ...item, [field]: value } : item
-      )
-    );
+    setAdditionalFields(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
   };
-
   const handleAddOption = (fieldId) => {
-    setAdditionalFields(prev => 
-      prev.map(item => 
-        item.id === fieldId 
-          ? { ...item, options: [...item.options, { id: Date.now(), text: "" }] }
-          : item
-      )
-    );
+    setAdditionalFields(prev => prev.map(item => item.id === fieldId ? { ...item, options: [...item.options, { id: Date.now(), text: "" }] } : item));
   };
-
   const handleOptionChange = (fieldId, optionId, value) => {
-    setAdditionalFields(prev => 
-      prev.map(item => 
-        item.id === fieldId 
-          ? { 
-              ...item, 
-              options: item.options.map(opt => 
-                opt.id === optionId ? { ...opt, text: value } : opt
-              )
-            }
-          : item
-      )
-    );
+    setAdditionalFields(prev => prev.map(item => item.id === fieldId ? { ...item, options: item.options.map(opt => opt.id === optionId ? { ...opt, text: value } : opt) } : item));
   };
-
   const handleRemoveOption = (fieldId, optionId) => {
-    setAdditionalFields(prev => 
-      prev.map(item => 
-        item.id === fieldId 
-          ? { ...item, options: item.options.filter(opt => opt.id !== optionId) }
-          : item
-      )
-    );
+    setAdditionalFields(prev => prev.map(item => item.id === fieldId ? { ...item, options: item.options.filter(opt => opt.id !== optionId) } : item));
   };
-
   const handleRemoveField = (id) => {
     setAdditionalFields(prev => prev.filter(item => item.id !== id));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    
-    const applicationFormData = {
-      programName: program?.title || "프로그램",
-      basicFields: formData,
-      additionalFields: additionalFields,
-      updatedAt: new Date().toISOString(),
-    };
-    
-    // TODO: 실제 API 호출로 신청폼 수정 저장
-    const savedForm = saveApplicationForm(dongName, programId, applicationFormData);
-    console.log("수정된 신청폼 데이터:", savedForm);
-    alert("신청폼이 수정되었습니다.");
-    navigate(-1);
-  };
-
-
+  if (hasApplicationForm === null) return <Container><LoadingMessage>로딩 중...</LoadingMessage></Container>;
 
   return (
     <Container>
@@ -187,75 +107,18 @@ const ApplicationEdit = () => {
         {/* 프로그램 정보 카드 - program이 있을 때만 표시 */}
         {program && (
           <ProgramCard>
-            <ProgramTitle>{program.title}</ProgramTitle>
+            <ProgramTitle>{program.programName}</ProgramTitle>
             <ProgramMeta>
-              {program.place} | {program.tuition} | {program.recruitment} | 일시{" "}
-              {formatPeriod(program.startDate, program.endDate)} (
-              {program.schedule})
+              {program.eduPlace} | {program.eduPrice}원 | 
+              모집: {formatPeriod(program.recruitStartDate, program.recruitEndDate)} | 
+              일시: {program.eduTime}
             </ProgramMeta>
           </ProgramCard>
         )}
 
-
-
-        {/* 이름 */}
         <FormCard>
-          <FormLabel>이름</FormLabel>
-          <FormInput
-            type="text"
-            name="name"
-            value={formData.name}
-            onChange={handleInputChange}
-            placeholder="이름을 입력하세요"
-          />
-        </FormCard>
-
-        {/* 주소 */}
-        <FormCard>
-          <FormLabel>주소</FormLabel>
-          <FormInput
-            type="text"
-            name="address"
-            value={formData.address}
-            onChange={handleInputChange}
-            placeholder="주소를 입력하세요"
-          />
-        </FormCard>
-
-        {/* 연락처 */}
-        <FormCard>
-          <FormLabel>연락처</FormLabel>
-          <FormInput
-            type="text"
-            name="contact"
-            value={formData.contact}
-            onChange={handleInputChange}
-            placeholder="연락처를 입력하세요"
-          />
-        </FormCard>
-
-        {/* 생년월일 */}
-        <FormCard>
-          <FormLabel>생년월일</FormLabel>
-          <FormInput
-            type="text"
-            name="birthDate"
-            value={formData.birthDate}
-            onChange={handleInputChange}
-            placeholder="생년월일을 입력하세요 (예: 2003.10.24)"
-          />
-        </FormCard>
-
-        {/* 이메일 */}
-        <FormCard>
-          <FormLabel>이메일</FormLabel>
-          <FormInput
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleInputChange}
-            placeholder="이메일을 입력하세요"
-          />
+          <FormLabel>공통 수집 항목</FormLabel>
+          <InfoBox>이름, 주소, 연락처, 생년월일, 이메일 정보는 자동으로 수집됩니다.</InfoBox>
         </FormCard>
 
         {/* 추가 필드 테이블 */}
@@ -484,6 +347,9 @@ const FormLabel = styled.label`
   color: #373736;
   margin-bottom: 8px;
 `;
+
+const InfoBox = styled.div` 
+background: #f9f9f9; padding: 12px; border-radius: 4px; font-size: 14px; color: #888; border: 1px dashed #ccc; `;
 
 const FormInput = styled.input`
   width: 100%;

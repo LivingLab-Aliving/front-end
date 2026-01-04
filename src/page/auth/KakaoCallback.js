@@ -16,14 +16,29 @@ const KakaoCallback = () => {
       axios
         .get(`http://localhost:8080/oauth?code=${code}`)
         .then((response) => {
-          const { accessToken, grantType, name, isNewUser } = response.data;
+          const { accessToken, grantType, name, isNewUser, userId } = response.data;
+          console.log(response.data)
+
+          localStorage.setItem("token", `${grantType} ${accessToken}`);
+          localStorage.setItem("username", name);
+          localStorage.setItem("userId", userId);
+          localStorage.setItem("userAddress", response.data.address);
+          localStorage.setItem("userPhone", response.data.phone);
+          localStorage.setItem("userBirth", response.data.birth);
+          localStorage.setItem("userEmail", response.data.email);
+
 
           if (isNewUser) {
             navigate("/signup", { state: { kakaoInfo: response.data } });
-          } else {
-            localStorage.setItem("token", `${grantType} ${accessToken}`);
-            localStorage.setItem("username", name);
-            navigate("/home");
+          } 
+          else {
+            const redirectUrl = sessionStorage.getItem("redirectUrl");
+            if (redirectUrl) {
+              sessionStorage.removeItem("redirectUrl");
+              navigate(redirectUrl); 
+            } else {
+              navigate("/home");
+            }
           }
         })
         .catch((error) => {

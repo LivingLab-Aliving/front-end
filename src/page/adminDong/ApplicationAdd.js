@@ -1,10 +1,9 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import styled from "styled-components";
+import axios from "axios"; // axios 추가
 import { ReactComponent as ArrowLeft } from "../../assets/icon/arrow_left.svg";
-import { PROGRAMS_BY_DONG } from "../../assets/data/data";
 import { formatPeriod } from "../../util/utils";
-import { getApplicationFormByProgram } from "../../assets/data/applicationForms";
 
 const ApplicationAdd = () => {
     const { dongName } = useParams();
@@ -12,15 +11,12 @@ const ApplicationAdd = () => {
     const [searchParams] = useSearchParams();
     const programId = searchParams.get('programId');
 
-    // 모든 Hook을 먼저 호출
-    // TODO: 실제 API 호출로 프로그램 정보 가져오기
-    const program = useMemo(() => {
-        if (!programId) return null;
-        const dongPrograms = PROGRAMS_BY_DONG[dongName] || [];
-        return dongPrograms.find((p) => p.id === programId);
-    }, [dongName, programId]);
-
-    // 신청서 데이터
+    // 상태 관리
+    const [program, setProgram] = useState(null);
+    const [applicationForm, setApplicationForm] = useState(null);
+    const [hasApplicationForm, setHasApplicationForm] = useState(null);
+    
+    // 기본 신청서 데이터
     const [formData, setFormData] = useState({
         name: "",
         address: "",
@@ -29,39 +25,44 @@ const ApplicationAdd = () => {
         email: "",
     });
 
-    // 추가 필드 데이터
     const [additionalFieldValues, setAdditionalFieldValues] = useState({});
 
-    // 신청폼 존재 여부 상태
-    const [hasApplicationForm, setHasApplicationForm] = useState(null);
-    const [applicationForm, setApplicationForm] = useState(null);
-
-    // 기존 신청폼 불러오기
+    // 🌟 데이터 로드 로직 (백엔드 통합)
     useEffect(() => {
-        if (!programId) {
-            setHasApplicationForm(false);
-            return;
-        }
+        const fetchProgramAndForm = async () => {
+            if (!programId) return;
 
-        // TODO: 실제 API 호출로 신청폼 데이터 가져오기
-        const existingForm = getApplicationFormByProgram(dongName, programId);
+            try {
+                setHasApplicationForm(null); // 로딩 시작
 
-        if (existingForm) {
-            setApplicationForm(existingForm);
-            setHasApplicationForm(true);
-            console.log("신청폼 불러옴:", existingForm);
-        } else {
-            setHasApplicationForm(false);
-            console.log("신청폼이 없습니다.");
-        }
-    }, [dongName, programId]);
+                // 1. 프로그램 기본 정보 가져오기
+                const programRes = await axios.get(`http://localhost:8080/api/program/${programId}`);
+                setProgram(programRes.data.data);
+
+                // 2. 프로그램 신청폼 항목(질문들) 가져오기
+                const formRes = await axios.get(`http://localhost:8080/api/program/${programId}/form`);
+                const formItems = formRes.data.data;
+
+                if (formItems && formItems.length > 0) {
+                    setApplicationForm({ additionalFields: formItems });
+                    setHasApplicationForm(true);
+                } else {
+                    // 기본 신청 정보만 있는 경우
+                    setHasApplicationForm(true);
+                    setApplicationForm({ additionalFields: [] });
+                }
+            } catch (error) {
+                console.error("데이터 로드 실패:", error);
+                setHasApplicationForm(false);
+            }
+        };
+
+        fetchProgramAndForm();
+    }, [programId]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        setFormData((prev) => ({
-            ...prev,
-            [name]: value,
-        }));
+        setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
     const handleAdditionalFieldChange = (fieldId, value) => {
@@ -71,187 +72,112 @@ const ApplicationAdd = () => {
         }));
     };
 
-    const handleSubmit = (e) => {
+    // 🌟 제출 로직 (백엔드 ApplicationRequestDto.Apply 규격에 맞춤)
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
-        const applicationData = {
-            ...formData,
-            additionalFields: additionalFieldValues,
-            programId: programId,
-            dongName: dongName,
-            appliedAt: new Date().toISOString(),
+        // 백엔드 답변 리스트 규격 변환 (List<AnswerRequest>)
+        const answers = Object.entries(additionalFieldValues).map(([id, val]) => ({
+            formItemId: parseInt(id),
+            answer: val
+        }));
+
+        const submitData = {
+            // 기본 필드 (백엔드 User 정보와 매칭되거나 별도 필드일 경우)
+            ...formData, 
+            answers: answers,
+            participationPath: "관리자 직접 추가" // 예시 필드
         };
 
-        // TODO: 실제 API 호출로 신청자 추가        
-        console.log("추가된 신청자 데이터:", applicationData);
-        alert("신청자가 추가되었습니다.");
-        navigate(-1);
+        try {
+            const adminId = localStorage.getItem("adminId"); // 관리자 권한 확인용
+            // 사용자를 대신해 등록하는 경우이므로 API 엔드포인트 확인 필요 (userId는 예시로 1번 전달)
+            await axios.post(`http://localhost:8080/api/program/${programId}/apply?userId=1`, submitData);
+            
+            alert("신청자가 성공적으로 추가되었습니다.");
+            navigate(-1);
+        } catch (error) {
+            alert("신청 실패: " + (error.response?.data?.message || "서버 오류"));
+        }
     };
 
-    // programId가 없으면 에러 처리
-    if (!programId) {
-        return (
-            <Container>
-                <ErrorMessage>프로그램 ID가 필요합니다.</ErrorMessage>
-                <ErrorBackButton onClick={() => navigate(-1)}>돌아가기</ErrorBackButton>
-            </Container>
-        );
-    }
-
-    // 신청폼 로딩 중
-    if (hasApplicationForm === null) {
-        return (
-            <Container>
-                <LoadingMessage>신청폼을 불러오는 중...</LoadingMessage>
-            </Container>
-        );
-    }
-
-    // 신청폼이 없는 경우
-    if (hasApplicationForm === false) {
-        return (
-            <Container>
-                <ErrorMessage>이 프로그램에는 신청폼이 없습니다.</ErrorMessage>
-                <ErrorDescription>
-                    프로그램 생성 시 신청폼을 먼저 만들어야 합니다.
-                </ErrorDescription>
-                <ErrorBackButton onClick={() => navigate(-1)}>돌아가기</ErrorBackButton>
-            </Container>
-        );
-    }
+    // --- 조건부 렌더링 로직 (기존과 동일) ---
+    if (!programId) return <Container><ErrorMessage>프로그램 ID가 필요합니다.</ErrorMessage></Container>;
+    if (hasApplicationForm === null) return <Container><LoadingMessage>신청폼을 불러오는 중...</LoadingMessage></Container>;
+    if (hasApplicationForm === false) return <Container><ErrorMessage>이 프로그램에는 신청폼이 없습니다.</ErrorMessage></Container>;
 
     return (
         <Container>
             <Header>
-                <BackButton onClick={() => navigate(-1)}>
-                    <ArrowLeft />
-                </BackButton>
+                <BackButton onClick={() => navigate(-1)}><ArrowLeft /></BackButton>
                 <HeaderTitle>인원 추가 등록</HeaderTitle>
             </Header>
 
             <Content>
-                {/* 프로그램 정보 카드 */}
                 {program && (
                     <ProgramCard>
-                        <ProgramTitle>{program.title}</ProgramTitle>
+                        <ProgramTitle>{program.programName}</ProgramTitle>
                         <ProgramMeta>
-                            {program.place} | {program.tuition} | {program.recruitment} | 일시{" "}
-                            {formatPeriod(program.startDate, program.endDate)} (
-                            {program.schedule})
+                            {program.eduPlace} | {program.eduPrice}원 | {program.capacity}명 정원
                         </ProgramMeta>
                     </ProgramCard>
                 )}
 
                 <form onSubmit={handleSubmit}>
-                    {/* 기본 필드들 */}
                     <FormCard>
                         <FormLabel>이름 <RequiredMark>*</RequiredMark></FormLabel>
-                        <FormInput
-                            type="text"
-                            name="name"
-                            value={formData.name}
-                            onChange={handleInputChange}
-                            placeholder="이름을 입력하세요"
-                            required
-                        />
+                        <FormInput name="name" value={formData.name} onChange={handleInputChange} required />
                     </FormCard>
-
                     <FormCard>
                         <FormLabel>주소 <RequiredMark>*</RequiredMark></FormLabel>
-                        <FormInput
-                            type="text"
-                            name="address"
-                            value={formData.address}
-                            onChange={handleInputChange}
-                            placeholder="주소를 입력하세요"
-                            required
-                        />
+                        <FormInput name="address" value={formData.address} onChange={handleInputChange} required />
                     </FormCard>
-
                     <FormCard>
                         <FormLabel>연락처 <RequiredMark>*</RequiredMark></FormLabel>
-                        <FormInput
-                            type="text"
-                            name="contact"
-                            value={formData.contact}
-                            onChange={handleInputChange}
-                            placeholder="연락처를 입력하세요"
-                            required
-                        />
+                        <FormInput name="contact" value={formData.contact} onChange={handleInputChange} required />
                     </FormCard>
-
                     <FormCard>
                         <FormLabel>생년월일 <RequiredMark>*</RequiredMark></FormLabel>
-                        <FormInput
-                            type="text"
-                            name="birthDate"
-                            value={formData.birthDate}
-                            onChange={handleInputChange}
-                            placeholder="생년월일을 입력하세요 (예: 2003.10.24)"
-                            required
-                        />
+                        <FormInput name="birthDate" value={formData.birthDate} onChange={handleInputChange} placeholder="2003.10.24" required />
                     </FormCard>
-
                     <FormCard>
                         <FormLabel>이메일 <RequiredMark>*</RequiredMark></FormLabel>
-                        <FormInput
-                            type="email"
-                            name="email"
-                            value={formData.email}
-                            onChange={handleInputChange}
-                            placeholder="이메일을 입력하세요"
-                            required
-                        />
+                        <FormInput type="email" name="email" value={formData.email} onChange={handleInputChange} required />
                     </FormCard>
 
-                    {/* 프로그램별 추가 필드들 */}
-                    {applicationForm?.additionalFields && applicationForm.additionalFields.length > 0 && (
-                        <AdditionalFieldsCard>
-                            <AdditionalFieldsTitle>추가 정보</AdditionalFieldsTitle>
-                            {applicationForm.additionalFields.map((field) => (
-                                <FormCard key={field.id}>
-                                    <FormLabel>
-                                        {field.label}
-                                        {field.required && <RequiredMark> *</RequiredMark>}
-                                    </FormLabel>
-
-                                    {field.type === "text" ? (
-                                        <FormInput
-                                            type="text"
-                                            value={additionalFieldValues[field.id] || ""}
-                                            onChange={(e) => handleAdditionalFieldChange(field.id, e.target.value)}
-                                            placeholder={`${field.label}을(를) 입력하세요`}
-                                            required={field.required}
-                                        />
-                                    ) : field.type === "radio" ? (
-                                        <RadioGroup>
-                                            {field.options?.map((option) => (
-                                                <RadioLabel key={option.id}>
-                                                    <RadioInput
-                                                        type="radio"
-                                                        name={`field_${field.id}`}
-                                                        value={option.text}
-                                                        checked={additionalFieldValues[field.id] === option.text}
-                                                        onChange={(e) => handleAdditionalFieldChange(field.id, e.target.value)}
-                                                        required={field.required}
-                                                    />
-                                                    <RadioText>{option.text}</RadioText>
-                                                </RadioLabel>
-                                            ))}
-                                        </RadioGroup>
-                                    ) : null}
-                                </FormCard>
-                            ))}
-                        </AdditionalFieldsCard>
-                    )}
+                    {/* 🌟 백엔드에서 가져온 추가 필드 렌더링 */}
+                    {applicationForm?.additionalFields?.map((field) => (
+                        <FormCard key={field.id}>
+                            <FormLabel>{field.label}{field.required && <RequiredMark> *</RequiredMark>}</FormLabel>
+                            {field.type === "TEXT" ? (
+                                <FormInput
+                                    value={additionalFieldValues[field.id] || ""}
+                                    onChange={(e) => handleAdditionalFieldChange(field.id, e.target.value)}
+                                    required={field.required}
+                                />
+                            ) : field.type === "RADIO" ? (
+                                <RadioGroup>
+                                    {field.options?.map((option, idx) => (
+                                        <RadioLabel key={idx}>
+                                            <RadioInput
+                                                type="radio"
+                                                name={`field_${field.id}`}
+                                                value={option}
+                                                checked={additionalFieldValues[field.id] === option}
+                                                onChange={(e) => handleAdditionalFieldChange(field.id, e.target.value)}
+                                                required={field.required}
+                                            />
+                                            <RadioText>{option}</RadioText>
+                                        </RadioLabel>
+                                    ))}
+                                </RadioGroup>
+                            ) : null}
+                        </FormCard>
+                    ))}
 
                     <SubmitButtonWrapper>
-                        <CancelButton type="button" onClick={() => navigate(-1)}>
-                            취소
-                        </CancelButton>
-                        <SubmitButton type="submit">
-                            인원 추가
-                        </SubmitButton>
+                        <CancelButton type="button" onClick={() => navigate(-1)}>취소</CancelButton>
+                        <SubmitButton type="submit">인원 추가</SubmitButton>
                     </SubmitButtonWrapper>
                 </form>
             </Content>

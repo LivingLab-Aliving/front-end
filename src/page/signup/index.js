@@ -84,10 +84,17 @@ const SignupPage = () => {
         await axios.post(`http://localhost:8080/api/user/${userId}/documents?type=CERTIFICATE`, exempFormData);
       }
 
-      localStorage.setItem("token", `${kakaoData.grantType} ${kakaoData.accessToken}`);
-      localStorage.setItem("username", kakaoData.name);
+      if (response.data.userId) {
+        const result = response.data.data;
+        
+        localStorage.setItem("token", `${kakaoData.grantType} ${kakaoData.accessToken}`);
+        localStorage.setItem("username", kakaoData.name);
+                
+        localStorage.setItem("userId", String(userId));
+        
+        setStep(3);
+      }
 
-      setStep(3);
     } catch (error) {
       console.error(error);
       alert("가입 처리 중 오류가 발생했습니다.");

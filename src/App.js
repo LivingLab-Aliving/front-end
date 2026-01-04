@@ -26,6 +26,7 @@ import AdminProgramDetail from "./page/adminDong/ProgramDetail";
 import ApplicationEdit from "./page/adminDong/ApplicationEdit";
 import ApplicationCreate from "./page/adminDong/ApplicationCreate";
 import ApplicationAdd from "./page/adminDong/ApplicationAdd";
+import AdminLoginPage from "./page/login/AdminLogin";
 
 function AppContent() {
   const location = useLocation();
@@ -40,6 +41,7 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
+          <Route path="/admin/login" element={<AdminLoginPage />} />
           <Route path="/home" element={<HomePage />} />
           <Route path="/oauth" element={<KakaoCallback />} />
           <Route path="/dong/:dongName" element={<UserDongPage />} />

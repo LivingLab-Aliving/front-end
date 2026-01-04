@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { ReactComponent as ArrowLeft } from "../../assets/icon/arrow_left.svg";
@@ -8,16 +8,41 @@ const ApplicationCreate = () => {
   const navigate = useNavigate();
 
   // 신청서 데이터
-  const [formData, setFormData] = useState({
-    name: "",
-    address: "",
-    contact: "",
-    birthDate: "",
-    email: "",
+  const [formData, setFormData] = useState(() => {
+    const saved = sessionStorage.getItem('tempApplicationForm');
+    const parsed = saved ? JSON.parse(saved) : null;
+    return parsed?.basicFields || {
+      name: "", address: "", contact: "", birthDate: "", email: "",
+    };
   });
 
-  // 추가 필드 데이터
-  const [additionalFields, setAdditionalFields] = useState([]);
+  const [additionalFields, setAdditionalFields] = useState(() => {
+    const saved = sessionStorage.getItem('tempApplicationForm');
+    const parsed = saved ? JSON.parse(saved) : null;
+    
+    if (parsed?.additionalFields) {
+      return parsed.additionalFields.map(field => ({
+        id: Date.now() + Math.random(),
+        label: field.label,
+        type: field.type.toLowerCase(),
+        required: field.required,
+        options: field.options ? field.options.map(opt => ({ id: Math.random(), text: opt })) : []
+      }));
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    const applicationFormData = {
+      basicFields: formData,
+      additionalFields: additionalFields.map(f => ({
+        ...f,
+        type: f.type.toUpperCase(),
+        options: f.options.map(o => o.text || o)
+      }))
+    };
+    sessionStorage.setItem('tempApplicationForm', JSON.stringify(applicationFormData));
+  }, [formData, additionalFields]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -87,24 +112,32 @@ const ApplicationCreate = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+  
+    const formattedAdditionalFields = additionalFields.map((field) => ({
+      label: field.label,
+      type: field.type === "text" ? "TEXT" : "RADIO",
+      required: field.required,
+      options: field.type === "radio" ? field.options.map((opt) => opt.text) : [],
+    }));
+  
     const applicationFormData = {
-      basicFields: formData,
-      additionalFields: additionalFields,
+      additionalFields: formattedAdditionalFields,
+      basicFields: formData, 
       createdAt: new Date().toISOString(),
     };
-    
-    // 생성된 폼 데이터를 sessionStorage에 임시 저장
+  
     const tempFormId = `temp_${Date.now()}`;
-    sessionStorage.setItem('tempApplicationForm', JSON.stringify({
-      id: tempFormId,
-      ...applicationFormData
-    }));
-    
-    console.log("생성된 신청폼 데이터:", applicationFormData);
-    alert("신청폼이 생성되었습니다.");
-    
-    // 프로그램 생성 페이지로 돌아가면서 폼 ID 전달
+    sessionStorage.setItem(
+      "tempApplicationForm",
+      JSON.stringify({
+        id: tempFormId,
+        ...applicationFormData,
+      })
+    );
+  
+    console.log("백엔드 전송 규격으로 변환된 데이터:", applicationFormData);
+    alert("신청폼 구성이 완료되었습니다.");
+  
     navigate(`/admin/dong/${dongName}/add?tempFormId=${tempFormId}`);
   };
 

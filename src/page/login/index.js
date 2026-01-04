@@ -6,7 +6,7 @@ import KakaoButtonImg from "../../assets/icon/btn_L_kakao.svg";
 const LoginPage = () => {
   const navigate = useNavigate();
 
-  const REST_API_KEY = ""; 
+  const REST_API_KEY = "641f49d356ce939559b0b256a38c40e9"; 
   const REDIRECT_URI = "http://localhost:3000/oauth";  
   const SCOPE = "account_email,name,gender,birthday,birthyear,phone_number";
 
@@ -35,7 +35,6 @@ const LoginPage = () => {
           <Description>카카오톡으로 간편하게 로그인 하세요</Description>
         </DescriptionSection>
 
-        {/* 🌟 카카오 로그인 버튼 하나만 유지 */}
         <KakaoButton onClick={handleKakaoLogin}>
           <img src={KakaoButtonImg} alt="카카오로 로그인하기" />
         </KakaoButton>
@@ -45,8 +44,8 @@ const LoginPage = () => {
           <LinkDivider>|</LinkDivider>
           <LinkItem href="#">문의하기</LinkItem>
           <LinkDivider>|</LinkDivider>
-          <LinkItem href="#">관리자 로그인</LinkItem>
-        </LinkSection>
+          <LinkButton onClick={() => navigate("/admin/login")}>관리자 로그인</LinkButton>
+          </LinkSection>
       </Content>
     </Container>
   );

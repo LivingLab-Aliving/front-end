@@ -1,15 +1,14 @@
-// src/page/adminDong/programEdit.js
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { PROGRAMS_BY_DONG } from '../../assets/data/data';
+import axios from 'axios'; // axios 추가
+import { formatPeriod } from '../../util/utils';
 
 const ProgramEditPage = () => {
     const { dongName, programId } = useParams();
     const navigate = useNavigate();
     
-    const [isDuplicateChecked, setIsDuplicateChecked] = useState(false);
+    const [isDuplicateChecked, setIsDuplicateChecked] = useState(true); // 수정 시엔 이미 이름이 있으므로 true
     
     const [formData, setFormData] = useState({
         programName: '',
@@ -38,82 +37,111 @@ const ProgramEditPage = () => {
         detailInfo: '',
     });
 
-    // TODO: 실제 API 호출로 기존 프로그램 데이터 불러오기
+    // 1. 🌟 실제 백엔드 API 호출로 기존 데이터 불러오기
     useEffect(() => {
-        const programs = PROGRAMS_BY_DONG[dongName] || [];
-        const program = programs.find(p => p.id === programId);
-        
-        if (program) {
-            // capacity에서 숫자만 추출
-            const capacityMatch = program.capacity?.match(/(\d+)명$/);
-            const capacityNumber = capacityMatch ? capacityMatch[1] : '';
-            
-            // tuition에서 숫자만 추출
-            const tuitionMatch = program.tuition?.match(/^([\d,]+)원/);
-            const tuitionNumber = tuitionMatch ? tuitionMatch[1].replace(/,/g, '') : '';
-            
-            setFormData({
-                programName: program.title || '',
-                scheduleStartHour: '10',
-                scheduleStartMinute: '00',
-                scheduleEndHour: '12',
-                scheduleEndMinute: '00',
-                quarter: program.quarter || '',
-                educationPeriodStart: program.startDate || '',
-                educationPeriodEnd: program.endDate || '',
-                recruitmentPeriodStart: program.startDate || '',
-                recruitmentPeriodStartHour: '09',
-                recruitmentPeriodStartMinute: '00',
-                recruitmentPeriodEnd: program.endDate || '',
-                recruitmentPeriodEndHour: '18',
-                recruitmentPeriodEndMinute: '00',
-                location: program.place || '',
-                category: program.class || '',
-                capacity: capacityNumber,
-                fee: tuitionNumber,
-                materials: program.materials || '',
-                institution: program.organization || dongName,
-                recruitmentLimit: '대전광역시 유성구민',
-                instructor: program.instructor?.name || '',
-                attachment: program.attachment || null,
-                detailInfo: program.detailInfo || '',
-            });
-            
-            console.log("불러온 프로그램 데이터:", program);
-            console.log("매핑된 폼 데이터:", {
-                capacity: capacityNumber,
-                fee: tuitionNumber,
-                attachment: program.attachment,
-                detailInfo: program.detailInfo
-            });
-        }
-    }, [dongName, programId]);
+        const fetchProgramData = async () => {
+            try {
+                // 백엔드의 상세 조회 API 호출
+                const response = await axios.get(`http://localhost:8080/api/program/${programId}`);
+                const data = response.data.data;
+
+                if (data) {
+                    // eduTime 분리 (예: "10:00 ~ 12:00")
+                    const timeRange = data.eduTime ? data.eduTime.split(' ~ ') : ['10:00', '12:00'];
+                    const startTime = timeRange[0].split(':');
+                    const endTime = timeRange[1].split(':');
+
+                    // recruitStartDate 분리 (예: "2026-01-01T09:00:00")
+                    const rStart = data.recruitStartDate ? data.recruitStartDate.split('T') : ['', '09:00'];
+                    const rEnd = data.recruitEndDate ? data.recruitEndDate.split('T') : ['', '18:00'];
+
+                    setFormData({
+                        programName: data.programName || '',
+                        scheduleStartHour: startTime[0] || '10',
+                        scheduleStartMinute: startTime[1] || '00',
+                        scheduleEndHour: endTime[0] || '12',
+                        scheduleEndMinute: endTime[1] || '00',
+                        quarter: data.quarter ? `${data.quarter}분기` : '',
+                        educationPeriodStart: data.eduStartDate ? data.eduStartDate.split('T')[0] : '',
+                        educationPeriodEnd: data.eduEndDate ? data.eduEndDate.split('T')[0] : '',
+                        recruitmentPeriodStart: rStart[0],
+                        recruitmentPeriodStartHour: rStart[1].split(':')[0],
+                        recruitmentPeriodStartMinute: rStart[1].split(':')[1],
+                        recruitmentPeriodEnd: rEnd[0],
+                        recruitmentPeriodEndHour: rEnd[1].split(':')[0],
+                        recruitmentPeriodEndMinute: rEnd[1].split(':')[1],
+                        location: data.eduPlace || '',
+                        category: data.programType === 'AUTONOMOUS' ? '정규강좌' : '특별', // 매핑 필요
+                        capacity: data.capacity || '',
+                        fee: data.eduPrice || '',
+                        materials: data.needs || '',
+                        institution: data.institution || dongName,
+                        recruitmentLimit: data.regionRestriction || '대전광역시 유성구민',
+                        instructor: data.instructorName || '',
+                        attachment: null, // 파일은 보안상 가져올 수 없으므로 null
+                        detailInfo: data.description || '',
+                    });
+                }
+            } catch (error) {
+                console.error("프로그램 데이터 로드 실패:", error);
+                alert("데이터를 불러오는데 실패했습니다.");
+            }
+        };
+
+        if (programId) fetchProgramData();
+    }, [programId, dongName]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
+        setFormData(prev => ({ ...prev, [name]: value }));
     };
 
     const handleFileChange = (e) => {
-        setFormData(prev => ({
-            ...prev,
-            attachment: e.target.files[0]
-        }));
+        setFormData(prev => ({ ...prev, attachment: e.target.files[0] }));
+    };
+
+    // 2. 🌟 수정 제출 로직 (Multipart/form-data)
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        
+        try {
+            const adminId = localStorage.getItem("adminId");
+            
+            const updateDto = {
+                programName: formData.programName,
+                eduTime: `${formData.scheduleStartHour}:${formData.scheduleStartMinute} ~ ${formData.scheduleEndHour}:${formData.scheduleEndMinute}`,
+                quarter: parseInt(formData.quarter),
+                eduStartDate: `${formData.educationPeriodStart}T00:00:00`,
+                eduEndDate: `${formData.educationPeriodEnd}T23:59:59`,
+                recruitStartDate: `${formData.recruitmentPeriodStart}T${formData.recruitmentPeriodStartHour}:${formData.recruitmentPeriodStartMinute}:00`,
+                recruitEndDate: `${formData.recruitmentPeriodEnd}T${formData.recruitmentPeriodEndHour}:${formData.recruitmentPeriodEndMinute}:59`,
+                eduPlace: formData.location,
+                capacity: parseInt(formData.capacity),
+                eduPrice: parseInt(formData.fee),
+                description: formData.detailInfo,
+                institutionName: formData.institution,
+                needs: formData.materials
+                // 추가 필드(신청폼)는 ApplicationEdit에서 별도로 처리하거나 여기에 포함
+            };
+
+            const sendData = new FormData();
+            sendData.append("dto", new Blob([JSON.stringify(updateDto)], { type: "application/json" }));
+            if (formData.attachment) {
+                sendData.append("newThumbnailFile", formData.attachment);
+            }
+
+            await axios.put(`http://localhost:8080/api/program/${programId}?adminId=${adminId}`, sendData);
+            
+            alert("수정이 완료되었습니다.");
+            navigate(`/admin/dong/${dongName}`);
+        } catch (error) {
+            console.error("수정 실패:", error);
+            alert("수정 저장 중 오류가 발생했습니다.");
+        }
     };
 
     const handleEditApplicationForm = () => {
-        navigate(`/admin/dong/${dongName}/application-form-edit?programId=${programId}`);
-    };
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        
-        // TODO: 실제 API 호출로 프로그램 수정 저장
-        
-        navigate(`/admin/dong/${dongName}/success`);
+        navigate(`/admin/dong/${dongName}/edit/${programId}/application`); 
     };
 
     const handleCancel = () => {
@@ -121,7 +149,6 @@ const ProgramEditPage = () => {
     };
 
     const handleDuplicateCheck = () => {
-        // TODO: 실제 API 호출로 프로그램명 중복 체크
         setIsDuplicateChecked(true);
     };
 

@@ -1,9 +1,8 @@
-// src/page/adminDong/programCreate.js
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
 import { saveApplicationForm } from '../../assets/data/applicationForms';
+import axios from "axios";
 
 const ProgramCreatePage = () => {
     const { dongName } = useParams();
@@ -15,51 +14,51 @@ const ProgramCreatePage = () => {
     const [applicationFormData, setApplicationFormData] = useState(null);
     const [showFormPreview, setShowFormPreview] = useState(false);
     
-    const [formData, setFormData] = useState({
-        programName: '',
-        scheduleStartHour: '10',
-        scheduleStartMinute: '00',
-        scheduleEndHour: '12',
-        scheduleEndMinute: '00',
-        quarter: '',
-        educationPeriodStart: '',
-        educationPeriodEnd: '',
-        recruitmentPeriodStart: '',
-        recruitmentPeriodStartHour: '09',
-        recruitmentPeriodStartMinute: '00',
-        recruitmentPeriodEnd: '',
-        recruitmentPeriodEndHour: '18',
-        recruitmentPeriodEndMinute: '00',
-        location: '',
-        category: '',
-        capacity: '',
-        fee: '',
-        materials: '',
-        institution: dongName,
-        recruitmentLimit: '대전광역시 유성구민',
-        instructor: '',
-        attachment: null,
-        detailInfo: '',
+    const [formData, setFormData] = useState(() => {
+        const saved = sessionStorage.getItem('tempProgramData');
+        return saved ? JSON.parse(saved) : {
+            programName: '',
+            scheduleStartHour: '10',
+            scheduleStartMinute: '00',
+            scheduleEndHour: '12',
+            scheduleEndMinute: '00',
+            quarter: '',
+            educationPeriodStart: '',
+            educationPeriodEnd: '',
+            recruitmentPeriodStart: '',
+            recruitmentPeriodStartHour: '09',
+            recruitmentPeriodStartMinute: '00',
+            recruitmentPeriodEnd: '',
+            recruitmentPeriodEndHour: '18',
+            recruitmentPeriodEndMinute: '00',
+            location: '',
+            category: '',
+            capacity: '',
+            fee: '',
+            materials: '',
+            institution: dongName,
+            recruitmentLimit: '대전광역시 유성구민',
+            instructor: '',
+            attachment: null,
+            detailInfo: '',
+        };
     });
 
-    // URL 파라미터에서 tempFormId 확인
+    useEffect(() => {
+        const { attachment, ...rest } = formData;
+        sessionStorage.setItem('tempProgramData', JSON.stringify(rest));
+    }, [formData]);
+
     useEffect(() => {
         const tempFormId = searchParams.get('tempFormId');
         if (tempFormId) {
             setApplicationFormId(tempFormId);
-            console.log("임시 신청폼 ID 설정됨:", tempFormId);
-            
-            // 임시 폼 데이터 확인
             const tempForm = JSON.parse(sessionStorage.getItem('tempApplicationForm') || '{}');
-            if (tempForm.id === tempFormId) {
-                console.log("임시 폼 데이터 확인됨:", tempForm);
-                console.log("기본 필드:", tempForm.basicFields);
-                console.log("추가 필드:", tempForm.additionalFields);
+            if (tempForm) {
                 setApplicationFormData(tempForm);
             }
         }
     }, [searchParams]);
-
 
 
     const handleChange = (e) => {
@@ -77,54 +76,93 @@ const ProgramCreatePage = () => {
         }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        
-        const programId = `program_${Date.now()}`;
-        const programData = {
-            ...formData,
-            id: programId,
-            applicationFormId: applicationFormId, // 신청폼 ID 연결
-        };
-        
-        // TODO: 실제 API 호출로 프로그램과 신청폼 함께 저장
-        // 임시로 localStorage에 저장
-        const existingPrograms = JSON.parse(localStorage.getItem('programs') || '{}');
-        if (!existingPrograms[dongName]) {
-            existingPrograms[dongName] = [];
+
+        if (!isDuplicateChecked) {
+            alert("프로그램명 중복 체크를 먼저 진행해주세요.");
+            return;
         }
-        existingPrograms[dongName].push(programData);
-        localStorage.setItem('programs', JSON.stringify(existingPrograms));
         
-        // 임시 저장된 신청폼을 정식으로 저장
-        if (applicationFormId) {
-            const tempForm = JSON.parse(sessionStorage.getItem('tempApplicationForm') || '{}');
-            if (tempForm.tempId === applicationFormId) {
-                // 임시 신청폼을 정식 신청폼으로 저장
-                const savedForm = saveApplicationForm(dongName, programId, {
-                    programName: formData.programName,
-                    basicFields: tempForm.basicFields,
-                    additionalFields: tempForm.additionalFields,
-                });
-                console.log("신청폼이 프로그램과 연결되어 저장됨:", savedForm);
-                
-                // 임시 데이터 삭제
-                sessionStorage.removeItem('tempApplicationForm');
+        try {
+            const adminId = localStorage.getItem("adminId");
+            
+            const programDto = {
+                programName: formData.programName,
+                eduTime: `${formData.scheduleStartHour}:${formData.scheduleStartMinute} ~ ${formData.scheduleEndHour}:${formData.scheduleEndMinute}`,
+                quarter: parseInt(formData.quarter) || 1,
+                eduStartDate: `${formData.educationPeriodStart}T00:00:00`,
+                eduEndDate: `${formData.educationPeriodEnd}T23:59:59`,
+                recruitStartDate: `${formData.recruitmentPeriodStart}T${formData.recruitmentPeriodStartHour}:${formData.recruitmentPeriodStartMinute}:00`,
+                recruitEndDate: `${formData.recruitmentPeriodEnd}T${formData.recruitmentPeriodEndHour}:${formData.recruitmentPeriodEndMinute}:59`,
+                eduPlace: formData.location,
+                capacity: parseInt(formData.capacity) || 0,
+                eduPrice: parseInt(formData.fee) || 0,
+                description: formData.detailInfo,
+                institution: formData.institution,
+                needs: formData.materials,
+                regionRestriction: "YUSEONG", 
+                programType: "AUTONOMOUS", 
+                additionalFields: applicationFormData?.additionalFields || []
+            };
+
+            const sendData = new FormData();
+            sendData.append("dto", new Blob([JSON.stringify(programDto)], { type: "application/json" }));
+
+            if (formData.attachment) {
+                sendData.append("thumbnailFile", formData.attachment);
             }
+
+            // 서버 전송
+            const response = await axios.post(`http://localhost:8080/api/program?adminId=${adminId}`, sendData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            if (response.data.status === "SUCCESS" || response.status === 200) {
+                alert("프로그램이 성공적으로 등록되었습니다.");
+                
+                // 성공 시 모든 세션 데이터 삭제
+                sessionStorage.removeItem('tempApplicationForm');
+                sessionStorage.removeItem('tempProgramData');
+                
+                navigate(`/admin/dong/${dongName}/success`);
+            }
+        } catch (error) {
+            console.error("등록 실패:", error);
+            alert("등록 실패: " + (error.response?.data?.message || "서버 오류"));
         }
-        
-        console.log("프로그램 데이터:", programData);
-        
-        navigate(`/admin/dong/${dongName}/success`);
     };
 
     const handleCancel = () => {
         navigate(`/admin/dong/${dongName}`);
     };
 
-    const handleDuplicateCheck = () => {
-        // TODO: 실제 API 호출로 프로그램명 중복 체크 
-        setIsDuplicateChecked(true);
+    const handleDuplicateCheck = async () => {
+        if (!formData.programName.trim()) {
+            alert("프로그램명을 입력해주세요.");
+            return;
+        }
+    
+        try {
+            const response = await axios.get(`http://localhost:8080/api/program/check-name`, {
+                params: { name: formData.programName }
+            });
+
+            console.log(response.data);
+    
+            const isDuplicated = response.data.data;
+    
+            if (isDuplicated) {
+                alert("이미 사용 중인 프로그램명입니다. 다른 이름을 입력해주세요.");
+                setIsDuplicateChecked(false);
+            } else {
+                alert("사용 가능한 프로그램명입니다.");
+                setIsDuplicateChecked(true);
+            }
+        } catch (error) {
+            console.error("중복 체크 실패:", error);
+            alert("중복 체크 중 오류가 발생했습니다.");
+        }
     };
 
     const handleCreateApplicationForm = () => {
