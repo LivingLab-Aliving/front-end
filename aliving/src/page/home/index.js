@@ -1,16 +1,12 @@
 import React, { useState } from "react";
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
+import CharacterImageSrc from "../../assets/character.svg";
+// TODO: 이미지 파일 추가 필요
+// import MapImageSrc from "../../assets/map.svg";
+// import SpeechBubbleImageSrc from "../../assets/speech_bubble.svg";
 
-// Figma 이미지 URL
-const MAP_IMAGE_URL =
-  "https://www.figma.com/api/mcp/asset/c2f43e4b-858e-4bb7-ae9c-aac36e8c4eda";
-const CHARACTER_IMAGE_URL =
-  "https://www.figma.com/api/mcp/asset/c87c22a7-d168-4276-80a7-a4e5cd29e3bb";
-const SPEECH_BUBBLE_URL =
-  "https://www.figma.com/api/mcp/asset/0441611c-bf26-47d7-802d-c2dbc1f99ded";
-
-// 동 버튼 배치 (Figma 기준 + 45px 오른쪽 이동)
+// 동 버튼 배치
 const DONG_BUTTONS_CONFIG = [
   // Row 1: top: 570px
   { name: "진잠동", left: "calc(56.25% + 100px)", top: "570px" },
@@ -42,24 +38,20 @@ const HomePage = () => {
       {/* 하늘색 배경 */}
       <BackgroundShape />
 
-      {/* 지도 */}
-      <MapContainer>
-        <MapImage src={MAP_IMAGE_URL} alt="유성구 지도" />
-      </MapContainer>
-
       {/* 말풍선 */}
-      <ChatBubbleContainer>
-        <ChatBubbleImage src={SPEECH_BUBBLE_URL} alt="" />
+      {/* TODO: speech_bubble.svg 파일이 assets 폴더에 필요합니다 */}
+      {/* <ChatBubbleContainer>
+        <ChatBubbleImage src={SpeechBubbleImageSrc} alt="" />
         <ChatBubbleText>
           지도에서 <HighlightText>원하는 동을 클릭</HighlightText>해서
           <br />
           동별 프로그램을 확인해요!
         </ChatBubbleText>
-      </ChatBubbleContainer>
+      </ChatBubbleContainer> */}
 
       {/* 캐릭터 */}
       <CharacterContainer>
-        <CharacterImage src={CHARACTER_IMAGE_URL} alt="캐릭터" />
+        <CharacterImage src={CharacterImageSrc} alt="캐릭터" />
       </CharacterContainer>
 
       {/* 제목 */}
@@ -95,12 +87,12 @@ const HomePage = () => {
 
 export default HomePage;
 
-// Styled Components - Figma 1920px 기준 정확한 위치값
+// Styled Components
 const PageContainer = styled.section`
   position: relative;
   width: 100%;
   max-width: 1920px;
-  margin: 0 auto;
+  margin: 0 0 auto 0;
   height: 906px; /* 1080 - 64(header) - 110(footer) */
   background: #fff;
   overflow: hidden;
@@ -109,27 +101,12 @@ const PageContainer = styled.section`
 const BackgroundShape = styled.div`
   position: absolute;
   left: 0;
-  top: 226px; /* 290 - 64(header) */
-  width: 989px;
-  height: 790px;
+  top: 25%;
+  width: 51.5%;
+  height: 87.2%;
   background: #e0f3fa;
   opacity: 0.7;
-  border-radius: 0 400px 400px 0;
-`;
-
-const MapContainer = styled.div`
-  position: absolute;
-  left: calc(12.5% + 470px);
-  top: 81px; /* 145 - 64(header) */
-  width: 450px;
-  height: 760px;
-  transform: translateX(-50%);
-`;
-
-const MapImage = styled.img`
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+  border-radius: 0 40% 40% 0;
 `;
 
 const ChatBubbleContainer = styled.div`
