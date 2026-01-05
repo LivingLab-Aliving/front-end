@@ -1,498 +1,703 @@
 // src/page/adminDong/programEdit.js
 
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
-import { PROGRAMS_BY_DONG } from '../../assets/data/data';
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import styled from "styled-components";
+import axios from "axios";
 
 const ProgramEditPage = () => {
-    const { dongName, programId } = useParams();
-    const navigate = useNavigate();
-    
-    const [isDuplicateChecked, setIsDuplicateChecked] = useState(false);
-    
-    const [formData, setFormData] = useState({
-        programName: '',
-        scheduleStartHour: '10',
-        scheduleStartMinute: '00',
-        scheduleEndHour: '12',
-        scheduleEndMinute: '00',
-        quarter: '',
-        educationPeriodStart: '',
-        educationPeriodEnd: '',
-        recruitmentPeriodStart: '',
-        recruitmentPeriodStartHour: '09',
-        recruitmentPeriodStartMinute: '00',
-        recruitmentPeriodEnd: '',
-        recruitmentPeriodEndHour: '18',
-        recruitmentPeriodEndMinute: '00',
-        location: '',
-        category: '',
-        capacity: '',
-        fee: '',
-        materials: '',
-        institution: dongName,
-        recruitmentLimit: '대전광역시 유성구민',
-        instructor: '',
-        attachment: null,
-        detailInfo: '',
-    });
+  const { dongName, programId } = useParams();
+  const navigate = useNavigate();
 
-    // TODO: 실제 API 호출로 기존 프로그램 데이터 불러오기
-    useEffect(() => {
-        const programs = PROGRAMS_BY_DONG[dongName] || [];
-        const program = programs.find(p => p.id === programId);
-        
-        if (program) {
-            // capacity에서 숫자만 추출
-            const capacityMatch = program.capacity?.match(/(\d+)명$/);
-            const capacityNumber = capacityMatch ? capacityMatch[1] : '';
-            
-            // tuition에서 숫자만 추출
-            const tuitionMatch = program.tuition?.match(/^([\d,]+)원/);
-            const tuitionNumber = tuitionMatch ? tuitionMatch[1].replace(/,/g, '') : '';
-            
-            setFormData({
-                programName: program.title || '',
-                scheduleStartHour: '10',
-                scheduleStartMinute: '00',
-                scheduleEndHour: '12',
-                scheduleEndMinute: '00',
-                quarter: program.quarter || '',
-                educationPeriodStart: program.startDate || '',
-                educationPeriodEnd: program.endDate || '',
-                recruitmentPeriodStart: program.startDate || '',
-                recruitmentPeriodStartHour: '09',
-                recruitmentPeriodStartMinute: '00',
-                recruitmentPeriodEnd: program.endDate || '',
-                recruitmentPeriodEndHour: '18',
-                recruitmentPeriodEndMinute: '00',
-                location: program.place || '',
-                category: program.class || '',
-                capacity: capacityNumber,
-                fee: tuitionNumber,
-                materials: program.materials || '',
-                institution: program.organization || dongName,
-                recruitmentLimit: '대전광역시 유성구민',
-                instructor: program.instructor?.name || '',
-                attachment: program.attachment || null,
-                detailInfo: program.detailInfo || '',
-            });
-            
-            console.log("불러온 프로그램 데이터:", program);
-            console.log("매핑된 폼 데이터:", {
-                capacity: capacityNumber,
-                fee: tuitionNumber,
-                attachment: program.attachment,
-                detailInfo: program.detailInfo
-            });
+  const [isDuplicateChecked, setIsDuplicateChecked] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [hasForm, setHasForm] = useState(false); // 신청폼 존재 여부
+
+  const [formData, setFormData] = useState({
+    programName: "",
+    scheduleStartHour: "10",
+    scheduleStartMinute: "00",
+    scheduleEndHour: "12",
+    scheduleEndMinute: "00",
+    quarter: "",
+    educationPeriodStart: "",
+    educationPeriodEnd: "",
+    recruitmentPeriodStart: "",
+    recruitmentPeriodStartHour: "09",
+    recruitmentPeriodStartMinute: "00",
+    recruitmentPeriodEnd: "",
+    recruitmentPeriodEndHour: "18",
+    recruitmentPeriodEndMinute: "00",
+    location: "",
+    category: "",
+    capacity: "",
+    fee: "",
+    materials: "",
+    institution: dongName,
+    recruitmentLimit: "대전광역시 유성구민",
+    instructor: "",
+    attachment: null,
+    detailInfo: "",
+  });
+
+  // 백엔드 API 호출로 기존 프로그램 데이터 불러오기
+  useEffect(() => {
+    const fetchProgramData = async () => {
+      try {
+        setLoading(true);
+        const adminId = localStorage.getItem("adminId");
+        const response = await axios.get(
+          `http://localhost:8080/api/program/${programId}`,
+          {
+            params: { adminId },
+          }
+        );
+
+        console.log("프로그램 데이터:", response.data.data);
+
+        const program = response.data.data;
+
+        // 신청폼 존재 여부 확인
+        try {
+          const formResponse = await axios.get(
+            `http://localhost:8080/api/program/${programId}/form`
+          );
+          if (formResponse.data?.data && formResponse.data.data.length > 0) {
+            setHasForm(true);
+            console.log("신청폼 존재:", formResponse.data.data);
+          } else {
+            setHasForm(false);
+          }
+        } catch (error) {
+          console.log("신청폼 조회 실패 (신청폼이 없을 수 있음):", error);
+          setHasForm(false);
         }
-    }, [dongName, programId]);
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
-    };
+        // 시간 파싱 (예: "10:00-12:00")
+        let scheduleStartHour = "10";
+        let scheduleStartMinute = "00";
+        let scheduleEndHour = "12";
+        let scheduleEndMinute = "00";
 
-    const handleFileChange = (e) => {
-        setFormData(prev => ({
-            ...prev,
-            attachment: e.target.files[0]
-        }));
-    };
+        if (program.eduTime) {
+          const timeMatch = program.eduTime.match(
+            /(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})/
+          );
+          if (timeMatch) {
+            scheduleStartHour = timeMatch[1];
+            scheduleStartMinute = timeMatch[2];
+            scheduleEndHour = timeMatch[3];
+            scheduleEndMinute = timeMatch[4];
+          }
+        }
 
-    const handleEditApplicationForm = () => {
-        navigate(`/admin/dong/${dongName}/application-form-edit?programId=${programId}`);
-    };
+        // 날짜 파싱 함수 (ISO 8601 형식에서 YYYY-MM-DD 추출)
+        const parseDate = (dateString) => {
+          if (!dateString) return "";
+          if (dateString.includes("T")) {
+            return dateString.split("T")[0];
+          }
+          return dateString;
+        };
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        
-        // TODO: 실제 API 호출로 프로그램 수정 저장
-        
-        navigate(`/admin/dong/${dongName}/success`);
-    };
+        // 모집기간 시간 파싱 (ISO 8601 형식에서 시간 추출)
+        const parseDateTime = (dateTimeString) => {
+          if (!dateTimeString) return { date: "", hour: "09", minute: "00" };
+          let date = "";
+          let hour = "09";
+          let minute = "00";
 
-    const handleCancel = () => {
+          if (dateTimeString.includes("T")) {
+            const [datePart, timePart] = dateTimeString.split("T");
+            date = datePart;
+            if (timePart) {
+              const [h, m] = timePart.split(":");
+              hour = h || "09";
+              minute = m || "00";
+            }
+          } else {
+            date = dateTimeString;
+          }
+
+          return { date, hour, minute };
+        };
+
+        // targetAudience를 프론트엔드 형식으로 변환
+        const getTargetAudienceDisplay = (targetAudience) => {
+          if (!targetAudience) return "대전광역시 유성구민";
+          const valueStr = targetAudience.toString();
+          if (valueStr.includes("전체") || valueStr === "ALL") return "전체";
+          if (valueStr.includes("성인") || valueStr === "ADULT") return "성인";
+          if (valueStr.includes("장애인") || valueStr === "DISABLED")
+            return "장애인";
+          if (valueStr.includes("청소년") || valueStr === "TEENAGER")
+            return "청소년";
+          if (valueStr.includes("어린이") || valueStr === "CHILD")
+            return "어린이";
+          return "대전광역시 유성구민";
+        };
+
+        // 분기 변환 (숫자 -> "1분기" 형식)
+        const formatQuarter = (quarter) => {
+          if (!quarter) return "";
+          const quarterNum =
+            typeof quarter === "string"
+              ? parseInt(quarter.replace("분기", ""))
+              : quarter;
+          if (isNaN(quarterNum)) return "";
+          return `${quarterNum}분기`;
+        };
+
+        const recruitStart = parseDateTime(program.recruitStartDate);
+        const recruitEnd = parseDateTime(program.recruitEndDate);
+
+        setFormData({
+          programName: program.programName || "",
+          scheduleStartHour: scheduleStartHour,
+          scheduleStartMinute: scheduleStartMinute,
+          scheduleEndHour: scheduleEndHour,
+          scheduleEndMinute: scheduleEndMinute,
+          quarter: formatQuarter(program.quarter),
+          educationPeriodStart: parseDate(program.eduStartDate),
+          educationPeriodEnd: parseDate(program.eduEndDate),
+          recruitmentPeriodStart: recruitStart.date,
+          recruitmentPeriodStartHour: recruitStart.hour,
+          recruitmentPeriodStartMinute: recruitStart.minute,
+          recruitmentPeriodEnd: recruitEnd.date,
+          recruitmentPeriodEndHour: recruitEnd.hour,
+          recruitmentPeriodEndMinute: recruitEnd.minute,
+          location: program.eduPlace || "",
+          category: program.programType === "AUTONOMOUS" ? "자치형" : "유성형",
+          capacity: program.capacity ? String(program.capacity) : "",
+          fee: program.eduPrice ? String(program.eduPrice) : "",
+          materials: program.needs || "",
+          institution: program.institution || dongName,
+          recruitmentLimit: getTargetAudienceDisplay(program.targetAudience),
+          instructor: program.instructorName || "",
+          attachment: program.classPlanUrl || null,
+          detailInfo: program.description || "",
+        });
+      } catch (error) {
+        console.error("프로그램 데이터를 불러오는데 실패했습니다.", error);
+        alert("프로그램을 찾을 수 없습니다.");
         navigate(`/admin/dong/${dongName}`);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    const handleDuplicateCheck = () => {
-        // TODO: 실제 API 호출로 프로그램명 중복 체크
-        setIsDuplicateChecked(true);
+    if (programId) {
+      fetchProgramData();
+    }
+  }, [dongName, programId, navigate]);
+
+  // 신청폼 수정 후 돌아왔을 때 상태 갱신을 위한 useEffect
+  useEffect(() => {
+    const handleFocus = () => {
+      // 페이지가 다시 포커스될 때 신청폼 상태 확인
+      if (programId) {
+        const checkFormStatus = async () => {
+          try {
+            const formResponse = await axios.get(
+              `http://localhost:8080/api/program/${programId}/form`
+            );
+            if (formResponse.data?.data && formResponse.data.data.length > 0) {
+              setHasForm(true);
+            } else {
+              setHasForm(false);
+            }
+          } catch (error) {
+            setHasForm(false);
+          }
+        };
+        checkFormStatus();
+      }
     };
 
-    return (
-        <PageContainer>
-            <Inner>
-                <Title>{formData.programName || '프로그램 수정'}</Title>
-                
-                <Form onSubmit={handleSubmit}>
-                    {/* 프로그램 기본 설정 */}
-                    <Section>
-                        <SectionTitle>프로그램 기본 설정</SectionTitle>
-                        
-                        <TableRow>
-                            <FieldLabel>프로그램명</FieldLabel>
-                            <FieldValue>
-                                <InputWithButton>
-                                    <Input
-                                        id="programName"
-                                        name="programName"
-                                        type="text"
-                                        value={formData.programName}
-                                        onChange={handleChange}
-                                        required
-                                    />
-                                    <TextButton 
-                                        type="button" 
-                                        onClick={handleDuplicateCheck}
-                                        $isChecked={isDuplicateChecked}
-                                    >
-                                        중복체크
-                                    </TextButton>
-                                </InputWithButton>
-                            </FieldValue>
-                        </TableRow>
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [programId]);
 
-                        <TableRow>
-                            <FieldLabel>교육일정</FieldLabel>
-                            <FieldValue>
-                                <TimeRangeWrapper>
-                                    <TimeSelectGroup>
-                                        <TimeSelect
-                                            name="scheduleStartHour"
-                                            value={formData.scheduleStartHour}
-                                            onChange={handleChange}
-                                        >
-                                            {Array.from({ length: 24 }, (_, i) => (
-                                                <option key={i} value={String(i).padStart(2, '0')}>
-                                                    {String(i).padStart(2, '0')}
-                                                </option>
-                                            ))}
-                                        </TimeSelect>
-                                        <TimeLabel>시</TimeLabel>
-                                        <TimeSelect
-                                            name="scheduleStartMinute"
-                                            value={formData.scheduleStartMinute}
-                                            onChange={handleChange}
-                                        >
-                                            {['00', '10', '20', '30', '40', '50'].map(min => (
-                                                <option key={min} value={min}>{min}</option>
-                                            ))}
-                                        </TimeSelect>
-                                        <TimeLabel>분</TimeLabel>
-                                    </TimeSelectGroup>
-                                    <Separator>~</Separator>
-                                    <TimeSelectGroup>
-                                        <TimeSelect
-                                            name="scheduleEndHour"
-                                            value={formData.scheduleEndHour}
-                                            onChange={handleChange}
-                                        >
-                                            {Array.from({ length: 24 }, (_, i) => (
-                                                <option key={i} value={String(i).padStart(2, '0')}>
-                                                    {String(i).padStart(2, '0')}
-                                                </option>
-                                            ))}
-                                        </TimeSelect>
-                                        <TimeLabel>시</TimeLabel>
-                                        <TimeSelect
-                                            name="scheduleEndMinute"
-                                            value={formData.scheduleEndMinute}
-                                            onChange={handleChange}
-                                        >
-                                            {['00', '10', '20', '30', '40', '50'].map(min => (
-                                                <option key={min} value={min}>{min}</option>
-                                            ))}
-                                        </TimeSelect>
-                                        <TimeLabel>분</TimeLabel>
-                                    </TimeSelectGroup>
-                                </TimeRangeWrapper>
-                            </FieldValue>
-                        </TableRow>
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
-                        <TableRow>
-                            <FieldLabel>분기</FieldLabel>
-                            <FieldValue>
-                                <Select
-                                    id="quarter"
-                                    name="quarter"
-                                    value={formData.quarter}
-                                    onChange={handleChange}
-                                >
-                                    <option value="">선택</option>
-                                    <option value="1분기">1분기</option>
-                                    <option value="2분기">2분기</option>
-                                    <option value="3분기">3분기</option>
-                                    <option value="4분기">4분기</option>
-                                </Select>
-                            </FieldValue>
-                        </TableRow>
+  const handleFileChange = (e) => {
+    setFormData((prev) => ({
+      ...prev,
+      attachment: e.target.files[0],
+    }));
+  };
 
-                        <TableRow>
-                            <FieldLabel>교육기간</FieldLabel>
-                            <FieldValue>
-                                <DateRangeWrapper>
-                                    <Input
-                                        id="educationPeriodStart"
-                                        name="educationPeriodStart"
-                                        type="date"
-                                        value={formData.educationPeriodStart}
-                                        onChange={handleChange}
-                                    />
-                                    <Separator>~</Separator>
-                                    <Input
-                                        id="educationPeriodEnd"
-                                        name="educationPeriodEnd"
-                                        type="date"
-                                        value={formData.educationPeriodEnd}
-                                        onChange={handleChange}
-                                    />
-                                </DateRangeWrapper>
-                            </FieldValue>
-                        </TableRow>
+  const handleEditApplicationForm = () => {
+    navigate(`/admin/dong/${dongName}/application-edit?programId=${programId}`);
+  };
 
-                        <TableRow>
-                            <FieldLabel>모집기간</FieldLabel>
-                            <FieldValue>
-                                <DateTimeRangeWrapper>
-                                    <DateRangeWrapper>
-                                        <Input
-                                            id="recruitmentPeriodStart"
-                                            name="recruitmentPeriodStart"
-                                            type="date"
-                                            value={formData.recruitmentPeriodStart}
-                                            onChange={handleChange}
-                                        />
-                                        <TimeSelectGroup>
-                                            <TimeSelect
-                                                name="recruitmentPeriodStartHour"
-                                                value={formData.recruitmentPeriodStartHour}
-                                                onChange={handleChange}
-                                            >
-                                                {Array.from({ length: 24 }, (_, i) => (
-                                                    <option key={i} value={String(i).padStart(2, '0')}>
-                                                        {String(i).padStart(2, '0')}
-                                                    </option>
-                                                ))}
-                                            </TimeSelect>
-                                            <TimeLabel>시</TimeLabel>
-                                            <TimeSelect
-                                                name="recruitmentPeriodStartMinute"
-                                                value={formData.recruitmentPeriodStartMinute}
-                                                onChange={handleChange}
-                                            >
-                                                {['00', '10', '20', '30', '40', '50'].map(min => (
-                                                    <option key={min} value={min}>{min}</option>
-                                                ))}
-                                            </TimeSelect>
-                                            <TimeLabel>분</TimeLabel>
-                                        </TimeSelectGroup>
-                                    </DateRangeWrapper>
-                                    <Separator>~</Separator>
-                                    <DateRangeWrapper>
-                                        <Input
-                                            id="recruitmentPeriodEnd"
-                                            name="recruitmentPeriodEnd"
-                                            type="date"
-                                            value={formData.recruitmentPeriodEnd}
-                                            onChange={handleChange}
-                                        />
-                                        <TimeSelectGroup>
-                                            <TimeSelect
-                                                name="recruitmentPeriodEndHour"
-                                                value={formData.recruitmentPeriodEndHour}
-                                                onChange={handleChange}
-                                            >
-                                                {Array.from({ length: 24 }, (_, i) => (
-                                                    <option key={i} value={String(i).padStart(2, '0')}>
-                                                        {String(i).padStart(2, '0')}
-                                                    </option>
-                                                ))}
-                                            </TimeSelect>
-                                            <TimeLabel>시</TimeLabel>
-                                            <TimeSelect
-                                                name="recruitmentPeriodEndMinute"
-                                                value={formData.recruitmentPeriodEndMinute}
-                                                onChange={handleChange}
-                                            >
-                                                {['00', '10', '20', '30', '40', '50'].map(min => (
-                                                    <option key={min} value={min}>{min}</option>
-                                                ))}
-                                            </TimeSelect>
-                                            <TimeLabel>분</TimeLabel>
-                                        </TimeSelectGroup>
-                                    </DateRangeWrapper>
-                                </DateTimeRangeWrapper>
-                            </FieldValue>
-                        </TableRow>
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-                        <TableRow>
-                            <FieldLabel>교육장소</FieldLabel>
-                            <FieldValue>
-                                <Input
-                                    id="location"
-                                    name="location"
-                                    type="text"
-                                    value={formData.location}
-                                    onChange={handleChange}
-                                />
-                            </FieldValue>
-                        </TableRow>
+    try {
+      const adminId = localStorage.getItem("adminId");
 
-                        <TableRow>
-                            <FieldLabel>분류</FieldLabel>
-                            <FieldValue>
-                                <Select
-                                    id="category"
-                                    name="category"
-                                    value={formData.category}
-                                    onChange={handleChange}
-                                >
-                                    <option value="">선택</option>
-                                    <option value="정규강좌">정규강좌</option>
-                                    <option value="특별">특별</option>
-                                    <option value="동아리">동아리</option>
-                                </Select>
-                            </FieldValue>
-                        </TableRow>
+      // 시간 포맷팅
+      const eduTime = `${formData.scheduleStartHour}:${formData.scheduleStartMinute}-${formData.scheduleEndHour}:${formData.scheduleEndMinute}`;
 
-                        <TableRow>
-                            <FieldLabel>신청인원</FieldLabel>
-                            <FieldValue>
-                                <CapacityWrapper>
-                                    <InputWithUnit>
-                                        <Input
-                                            id="capacity"
-                                            name="capacity"
-                                            type="number"
-                                            value={formData.capacity}
-                                            onChange={handleChange}
-                                        />
-                                        <UnitLabel>명</UnitLabel>
-                                    </InputWithUnit>
-                                    <ApplicationFormButton 
-                                        type="button"
-                                        onClick={handleEditApplicationForm}
-                                    >
-                                        신청폼 수정
-                                    </ApplicationFormButton>
-                                </CapacityWrapper>
-                            </FieldValue>
-                        </TableRow>
+      // 프로그램 수정 데이터 준비
+      const updateData = {
+        programName: formData.programName,
+        quarter: formData.quarter ? parseInt(formData.quarter) : null,
+        eduStartDate: formData.educationPeriodStart,
+        eduEndDate: formData.educationPeriodEnd,
+        recruitStartDate: formData.recruitmentPeriodStart,
+        recruitEndDate: formData.recruitmentPeriodEnd,
+        eduPlace: formData.location,
+        programType: formData.category === "자치형" ? "AUTONOMOUS" : "YUSEONG",
+        capacity: formData.capacity ? parseInt(formData.capacity) : 0,
+        eduPrice: formData.fee ? parseInt(formData.fee) : 0,
+        needs: formData.materials,
+        institution: formData.institution,
+        instructorName: formData.instructor,
+        description: formData.detailInfo,
+        eduTime: eduTime,
+        targetAudience: formData.recruitmentLimit,
+      };
 
-                        <TableRow>
-                            <FieldLabel>수강료</FieldLabel>
-                            <FieldValue>
-                                <InputWithUnit>
-                                    <Input
-                                        id="fee"
-                                        name="fee"
-                                        type="number"
-                                        value={formData.fee}
-                                        onChange={handleChange}
-                                    />
-                                    <UnitLabel>원</UnitLabel>
-                                </InputWithUnit>
-                            </FieldValue>
-                        </TableRow>
+      // 파일이 있으면 FormData로 전송
+      if (formData.attachment && formData.attachment instanceof File) {
+        const formDataToSend = new FormData();
+        formDataToSend.append("file", formData.attachment);
 
-                        <TableRow>
-                            <FieldLabel>학습자준비물</FieldLabel>
-                            <FieldValue>
-                                <Input
-                                    id="materials"
-                                    name="materials"
-                                    type="text"
-                                    value={formData.materials}
-                                    onChange={handleChange}
-                                />
-                            </FieldValue>
-                        </TableRow>
+        // 먼저 파일 업로드
+        await axios.post(
+          `http://localhost:8080/api/program/${programId}/class-plan`,
+          formDataToSend,
+          {
+            params: { adminId },
+            headers: { "Content-Type": "multipart/form-data" },
+          }
+        );
+      }
 
-                        <TableRow>
-                            <FieldLabel>교육기관/모집제한</FieldLabel>
-                            <FieldValue>
-                                <MultiSelectWrapper>
-                                    <InstitutionInput>
-                                        <Input
-                                            id="institution"
-                                            name="institution"
-                                            type="text"
-                                            value={formData.institution}
-                                            onChange={handleChange}
-                                        />
-                                    </InstitutionInput>
-                                    <InstitutionInput>
-                                        <Input
-                                            id="recruitmentLimit"
-                                            name="recruitmentLimit"
-                                            type="text"
-                                            value={formData.recruitmentLimit}
-                                            onChange={handleChange}
-                                        />
-                                    </InstitutionInput>
-                                </MultiSelectWrapper>
-                            </FieldValue>
-                        </TableRow>
-                    </Section>
+      // 프로그램 정보 수정
+      await axios.put(
+        `http://localhost:8080/api/program/${programId}`,
+        updateData,
+        {
+          params: { adminId },
+        }
+      );
 
-                    {/* 프로그램 상세 설정 */}
-                    <Section>
-                        <SectionTitle>프로그램 상세 설정</SectionTitle>
-                        
-                        <TableRow>
-                            <FieldLabel>강사명</FieldLabel>
-                            <FieldValue>
-                                <Input
-                                    id="instructor"
-                                    name="instructor"
-                                    type="text"
-                                    value={formData.instructor}
-                                    onChange={handleChange}
-                                />
-                            </FieldValue>
-                        </TableRow>
+      alert("프로그램이 성공적으로 수정되었습니다.");
+      navigate(`/admin/dong/${dongName}/success`);
+    } catch (error) {
+      console.error("프로그램 수정 실패:", error);
+      alert("프로그램 수정 중 오류가 발생했습니다.");
+    }
+  };
 
-                        <TableRow>
-                            <FieldLabel>첨부파일</FieldLabel>
-                            <FieldValue>
-                                <FileInput
-                                    id="attachment"
-                                    name="attachment"
-                                    type="file"
-                                    onChange={handleFileChange}
-                                />
-                            </FieldValue>
-                        </TableRow>
+  const handleCancel = () => {
+    navigate(`/admin/dong/${dongName}`);
+  };
 
-                        <TableRow>
-                            <FieldLabel>상세정보입력</FieldLabel>
-                            <WideFieldValue>
-                                <Textarea
-                                    id="detailInfo"
-                                    name="detailInfo"
-                                    rows={8}
-                                    placeholder="프로그램에 대한 상세 정보를 입력하세요"
-                                    value={formData.detailInfo}
-                                    onChange={handleChange}
-                                />
-                            </WideFieldValue>
-                        </TableRow>
-                    </Section>
+  const handleDuplicateCheck = () => {
+    // TODO: 실제 API 호출로 프로그램명 중복 체크
+    setIsDuplicateChecked(true);
+  };
 
-                    <ButtonGroup>
-                        <CancelButton type="button" onClick={handleCancel}>취소</CancelButton>
-                        <SubmitButton type="submit">프로그램 수정하기</SubmitButton>
-                    </ButtonGroup>
-                </Form>
-            </Inner>
-        </PageContainer>
-    );
+  return (
+    <PageContainer>
+      <Inner>
+        <Title>{formData.programName || "프로그램 수정"}</Title>
+
+        <Form onSubmit={handleSubmit}>
+          {/* 프로그램 기본 설정 */}
+          <Section>
+            <SectionTitle>프로그램 기본 설정</SectionTitle>
+
+            <TableRow>
+              <FieldLabel>프로그램명</FieldLabel>
+              <FieldValue>
+                <InputWithButton>
+                  <Input
+                    id="programName"
+                    name="programName"
+                    type="text"
+                    value={formData.programName}
+                    onChange={handleChange}
+                    required
+                  />
+                  <TextButton
+                    type="button"
+                    onClick={handleDuplicateCheck}
+                    $isChecked={isDuplicateChecked}
+                  >
+                    중복체크
+                  </TextButton>
+                </InputWithButton>
+              </FieldValue>
+            </TableRow>
+
+            <TableRow>
+              <FieldLabel>교육일정</FieldLabel>
+              <FieldValue>
+                <TimeRangeWrapper>
+                  <TimeSelectGroup>
+                    <TimeSelect
+                      name="scheduleStartHour"
+                      value={formData.scheduleStartHour}
+                      onChange={handleChange}
+                    >
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <option key={i} value={String(i).padStart(2, "0")}>
+                          {String(i).padStart(2, "0")}
+                        </option>
+                      ))}
+                    </TimeSelect>
+                    <TimeLabel>시</TimeLabel>
+                    <TimeSelect
+                      name="scheduleStartMinute"
+                      value={formData.scheduleStartMinute}
+                      onChange={handleChange}
+                    >
+                      {["00", "10", "20", "30", "40", "50"].map((min) => (
+                        <option key={min} value={min}>
+                          {min}
+                        </option>
+                      ))}
+                    </TimeSelect>
+                    <TimeLabel>분</TimeLabel>
+                  </TimeSelectGroup>
+                  <Separator>~</Separator>
+                  <TimeSelectGroup>
+                    <TimeSelect
+                      name="scheduleEndHour"
+                      value={formData.scheduleEndHour}
+                      onChange={handleChange}
+                    >
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <option key={i} value={String(i).padStart(2, "0")}>
+                          {String(i).padStart(2, "0")}
+                        </option>
+                      ))}
+                    </TimeSelect>
+                    <TimeLabel>시</TimeLabel>
+                    <TimeSelect
+                      name="scheduleEndMinute"
+                      value={formData.scheduleEndMinute}
+                      onChange={handleChange}
+                    >
+                      {["00", "10", "20", "30", "40", "50"].map((min) => (
+                        <option key={min} value={min}>
+                          {min}
+                        </option>
+                      ))}
+                    </TimeSelect>
+                    <TimeLabel>분</TimeLabel>
+                  </TimeSelectGroup>
+                </TimeRangeWrapper>
+              </FieldValue>
+            </TableRow>
+
+            <TableRow>
+              <FieldLabel>분기</FieldLabel>
+              <FieldValue>
+                <Select
+                  id="quarter"
+                  name="quarter"
+                  value={formData.quarter}
+                  onChange={handleChange}
+                >
+                  <option value="">선택</option>
+                  <option value="1분기">1분기</option>
+                  <option value="2분기">2분기</option>
+                  <option value="3분기">3분기</option>
+                  <option value="4분기">4분기</option>
+                </Select>
+              </FieldValue>
+            </TableRow>
+
+            <TableRow>
+              <FieldLabel>교육기간</FieldLabel>
+              <FieldValue>
+                <DateRangeWrapper>
+                  <Input
+                    id="educationPeriodStart"
+                    name="educationPeriodStart"
+                    type="date"
+                    value={formData.educationPeriodStart}
+                    onChange={handleChange}
+                  />
+                  <Separator>~</Separator>
+                  <Input
+                    id="educationPeriodEnd"
+                    name="educationPeriodEnd"
+                    type="date"
+                    value={formData.educationPeriodEnd}
+                    onChange={handleChange}
+                  />
+                </DateRangeWrapper>
+              </FieldValue>
+            </TableRow>
+
+            <TableRow>
+              <FieldLabel>모집기간</FieldLabel>
+              <FieldValue>
+                <DateTimeRangeWrapper>
+                  <DateRangeWrapper>
+                    <Input
+                      id="recruitmentPeriodStart"
+                      name="recruitmentPeriodStart"
+                      type="date"
+                      value={formData.recruitmentPeriodStart}
+                      onChange={handleChange}
+                    />
+                    <TimeSelectGroup>
+                      <TimeSelect
+                        name="recruitmentPeriodStartHour"
+                        value={formData.recruitmentPeriodStartHour}
+                        onChange={handleChange}
+                      >
+                        {Array.from({ length: 24 }, (_, i) => (
+                          <option key={i} value={String(i).padStart(2, "0")}>
+                            {String(i).padStart(2, "0")}
+                          </option>
+                        ))}
+                      </TimeSelect>
+                      <TimeLabel>시</TimeLabel>
+                      <TimeSelect
+                        name="recruitmentPeriodStartMinute"
+                        value={formData.recruitmentPeriodStartMinute}
+                        onChange={handleChange}
+                      >
+                        {["00", "10", "20", "30", "40", "50"].map((min) => (
+                          <option key={min} value={min}>
+                            {min}
+                          </option>
+                        ))}
+                      </TimeSelect>
+                      <TimeLabel>분</TimeLabel>
+                    </TimeSelectGroup>
+                  </DateRangeWrapper>
+                  <Separator>~</Separator>
+                  <DateRangeWrapper>
+                    <Input
+                      id="recruitmentPeriodEnd"
+                      name="recruitmentPeriodEnd"
+                      type="date"
+                      value={formData.recruitmentPeriodEnd}
+                      onChange={handleChange}
+                    />
+                    <TimeSelectGroup>
+                      <TimeSelect
+                        name="recruitmentPeriodEndHour"
+                        value={formData.recruitmentPeriodEndHour}
+                        onChange={handleChange}
+                      >
+                        {Array.from({ length: 24 }, (_, i) => (
+                          <option key={i} value={String(i).padStart(2, "0")}>
+                            {String(i).padStart(2, "0")}
+                          </option>
+                        ))}
+                      </TimeSelect>
+                      <TimeLabel>시</TimeLabel>
+                      <TimeSelect
+                        name="recruitmentPeriodEndMinute"
+                        value={formData.recruitmentPeriodEndMinute}
+                        onChange={handleChange}
+                      >
+                        {["00", "10", "20", "30", "40", "50"].map((min) => (
+                          <option key={min} value={min}>
+                            {min}
+                          </option>
+                        ))}
+                      </TimeSelect>
+                      <TimeLabel>분</TimeLabel>
+                    </TimeSelectGroup>
+                  </DateRangeWrapper>
+                </DateTimeRangeWrapper>
+              </FieldValue>
+            </TableRow>
+
+            <TableRow>
+              <FieldLabel>교육장소</FieldLabel>
+              <FieldValue>
+                <Input
+                  id="location"
+                  name="location"
+                  type="text"
+                  value={formData.location}
+                  onChange={handleChange}
+                />
+              </FieldValue>
+            </TableRow>
+
+            <TableRow>
+              <FieldLabel>분류</FieldLabel>
+              <FieldValue>
+                <Select
+                  id="category"
+                  name="category"
+                  value={formData.category}
+                  onChange={handleChange}
+                >
+                  <option value="">선택</option>
+                  <option value="유성형">유성형</option>
+                  <option value="자치형">자치형</option>
+                </Select>
+              </FieldValue>
+            </TableRow>
+
+            <TableRow>
+              <FieldLabel>신청인원</FieldLabel>
+              <FieldValue>
+                <CapacityWrapper>
+                  <InputWithUnit>
+                    <Input
+                      id="capacity"
+                      name="capacity"
+                      type="number"
+                      value={formData.capacity}
+                      onChange={handleChange}
+                    />
+                    <UnitLabel>명</UnitLabel>
+                  </InputWithUnit>
+                  {hasForm ? (
+                    <ApplicationFormButton
+                      type="button"
+                      onClick={handleEditApplicationForm}
+                    >
+                      신청폼 수정
+                    </ApplicationFormButton>
+                  ) : (
+                    <ApplicationFormButton
+                      type="button"
+                      onClick={() =>
+                        navigate(
+                          `/admin/dong/${dongName}/application-create?programId=${programId}`
+                        )
+                      }
+                    >
+                      신청폼 만들기
+                    </ApplicationFormButton>
+                  )}
+                </CapacityWrapper>
+              </FieldValue>
+            </TableRow>
+
+            <TableRow>
+              <FieldLabel>수강료</FieldLabel>
+              <FieldValue>
+                <InputWithUnit>
+                  <Input
+                    id="fee"
+                    name="fee"
+                    type="number"
+                    value={formData.fee}
+                    onChange={handleChange}
+                  />
+                  <UnitLabel>원</UnitLabel>
+                </InputWithUnit>
+              </FieldValue>
+            </TableRow>
+
+            <TableRow>
+              <FieldLabel>학습자준비물</FieldLabel>
+              <FieldValue>
+                <Input
+                  id="materials"
+                  name="materials"
+                  type="text"
+                  value={formData.materials}
+                  onChange={handleChange}
+                />
+              </FieldValue>
+            </TableRow>
+
+            <TableRow>
+              <FieldLabel>교육기관/모집제한</FieldLabel>
+              <FieldValue>
+                <MultiSelectWrapper>
+                  <InstitutionInput>
+                    <Input
+                      id="institution"
+                      name="institution"
+                      type="text"
+                      value={formData.institution}
+                      onChange={handleChange}
+                    />
+                  </InstitutionInput>
+                  <InstitutionInput>
+                    <Input
+                      id="recruitmentLimit"
+                      name="recruitmentLimit"
+                      type="text"
+                      value={formData.recruitmentLimit}
+                      onChange={handleChange}
+                    />
+                  </InstitutionInput>
+                </MultiSelectWrapper>
+              </FieldValue>
+            </TableRow>
+          </Section>
+
+          {/* 프로그램 상세 설정 */}
+          <Section>
+            <SectionTitle>프로그램 상세 설정</SectionTitle>
+
+            <TableRow>
+              <FieldLabel>강사명</FieldLabel>
+              <FieldValue>
+                <Input
+                  id="instructor"
+                  name="instructor"
+                  type="text"
+                  value={formData.instructor}
+                  onChange={handleChange}
+                />
+              </FieldValue>
+            </TableRow>
+
+            <TableRow>
+              <FieldLabel>첨부파일</FieldLabel>
+              <FieldValue>
+                <FileInput
+                  id="attachment"
+                  name="attachment"
+                  type="file"
+                  onChange={handleFileChange}
+                />
+              </FieldValue>
+            </TableRow>
+
+            <TableRow>
+              <FieldLabel>상세정보입력</FieldLabel>
+              <WideFieldValue>
+                <Textarea
+                  id="detailInfo"
+                  name="detailInfo"
+                  rows={8}
+                  placeholder="프로그램에 대한 상세 정보를 입력하세요"
+                  value={formData.detailInfo}
+                  onChange={handleChange}
+                />
+              </WideFieldValue>
+            </TableRow>
+          </Section>
+
+          <ButtonGroup>
+            <CancelButton type="button" onClick={handleCancel}>
+              취소
+            </CancelButton>
+            <SubmitButton type="submit">프로그램 수정하기</SubmitButton>
+          </ButtonGroup>
+        </Form>
+      </Inner>
+    </PageContainer>
+  );
 };
 
 export default ProgramEditPage;
@@ -552,7 +757,7 @@ const TableRow = styled.div`
   align-items: center;
   border-bottom: 1px solid #d2d6db;
   min-height: 60px;
-  
+
   &:last-child {
     border-bottom: none;
   }
@@ -632,7 +837,7 @@ const TimeSelect = styled.select`
   cursor: pointer;
   width: 70px;
   text-align: center;
-  
+
   &:focus {
     outline: none;
     border-color: #0070f3;
@@ -665,7 +870,7 @@ const UnitLabel = styled.span`
 const TextButton = styled.button`
   background: none;
   border: none;
-  color: ${props => props.$isChecked ? '#1557b7' : '#666'};
+  color: ${(props) => (props.$isChecked ? "#1557b7" : "#666")};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -673,7 +878,7 @@ const TextButton = styled.button`
   white-space: nowrap;
   transition: color 0.2s;
   font-family: "Pretendard", sans-serif;
-  
+
   &:hover {
     color: #1557b7;
   }
@@ -687,7 +892,7 @@ const Input = styled.input`
   background: #fff;
   color: #333;
   font-family: "Pretendard", sans-serif;
-  
+
   &:focus {
     outline: none;
     border-color: #1557b7;
@@ -711,7 +916,7 @@ const Select = styled.select`
   background-size: 12px;
   transition: all 0.2s ease;
   font-family: "Pretendard", sans-serif;
-  
+
   &:hover {
     border-color: #1557b7;
     background-color: #f8f9fa;
@@ -739,7 +944,7 @@ const FileInput = styled.input`
   border: 1px solid #d0d0d0;
   border-radius: 6px;
   font-size: 0.95rem;
-  
+
   &:focus {
     outline: none;
     border-color: #0070f3;
@@ -756,7 +961,7 @@ const Textarea = styled.textarea`
   resize: vertical;
   min-height: 120px;
   box-sizing: border-box;
-  
+
   &:focus {
     outline: none;
     border-color: #0070f3;
