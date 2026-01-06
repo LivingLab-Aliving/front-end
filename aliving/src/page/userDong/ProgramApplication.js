@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { ReactComponent as ArrowLeft } from "../../assets/icon/arrow_left.svg";
+import axios from "axios";
 import { PROGRAMS_BY_DONG } from "../../assets/data/data";
 import { formatPeriod } from "../../util/utils";
 
@@ -9,33 +10,74 @@ const ProgramApplication = () => {
   const { dongName, programId } = useParams();
   const navigate = useNavigate();
 
-  const program = useMemo(() => {
-    const dongPrograms = PROGRAMS_BY_DONG[dongName] || [];
-    return dongPrograms.find((p) => p.id === programId);
-  }, [dongName, programId]);
-
+  const [program, setProgram] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
-    name: "김유성",
-    address: "(32032) 대전 유성구 학하서로 122번길 33-34",
-    contact: "010-1234-5678",
-    birthDate: "2003.10.24",
-    email: "yuseong34@naver.com",
+    name: "",
+    address: "",
+    contact: "",
+    birthDate: "",
+    email: "",
   });
 
   const [consent, setConsent] = useState({
-    personalInfo: "agree",
+    personalInfo: "disagree",
     disadvantage: "no",
   });
 
   const [participationPath, setParticipationPath] = useState(["instagram"]);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
+  const [applicantCount, setApplicantCount] = useState(0);
+
+  useEffect(() => {
+    const validateAndFetch = async () => {
+        const userId = localStorage.getItem("userId");
+
+        if (!userId) {
+          alert("로그인이 필요한 서비스입니다.");
+          sessionStorage.setItem("redirectUrl", window.location.pathname);
+          navigate("/");
+          return;
+        }
+
+        try{
+          setLoading(true);
+
+          const programRes = await axios.get(`http://localhost:8080/api/program/${programId}`, {
+            params: { userId }
+          });
+          
+          const programData = programRes.data.data;
+          console.log("프로그램 데이터:", programData);
+
+          if (programData.applied) {
+            alert("이미 신청이 완료된 프로그램입니다.");
+            navigate(`/dong/${dongName}/program/${programId}`, { replace: true });
+            return;
+          }
+
+          setProgram(programData);
+
+          const countRes = await axios.get(`http://localhost:8080/api/program/${programId}/applicants/count`);
+          setApplicantCount(countRes.data.data);
+
+          setFormData({
+            name: localStorage.getItem("username") || "이름 정보 없음",
+            address: localStorage.getItem("userAddress") || "주소 정보 없음",
+            contact: localStorage.getItem("userPhone") || "연락처 정보 없음",
+            birthDate: localStorage.getItem("userBirth") || "생년월일 정보 없음",
+            email: localStorage.getItem("userEmail") || "이메일 정보 없음",
+          });
+
+        } catch (error) {
+          console.error("데이터 로딩 실패:", error);
+          alert("정보를 불러오는데 실패했습니다.");
+        } finally {
+          setLoading(false);
+        }
+    };
+    validateAndFetch();
+  }, [programId, navigate, dongName]);
 
   const handleConsentChange = (e) => {
     const { name, value } = e.target;
@@ -49,11 +91,35 @@ const ProgramApplication = () => {
     setParticipationPath([value]);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: 실제 신청 로직 구현
-    console.log("신청 데이터:", { formData, consent, participationPath });
-    navigate(`/dong/${dongName}/program/${programId}/apply/success`);
+    
+    if (consent.personalInfo !== "agree" || consent.disadvantage !== "yes") {
+      alert("모든 동의 항목에 체크해주셔야 신청이 가능합니다.");
+      return;
+    }
+
+    try {
+      const userId = localStorage.getItem("userId");
+      
+      const response = await axios.post(
+        `http://localhost:8080/api/program/${programId}/apply`, 
+        { participationPath: participationPath[0] }, 
+        { params: { userId: userId } }
+      );
+
+      console.log("신청 성공 상세:", response.data);
+  
+      if (response.data.message === "프로그램 신청 완료") {
+        alert("프로그램 신청이 정상적으로 완료되었습니다!");
+        navigate(`/dong/${dongName}/program/${programId}`);
+      }
+    } catch (error) {
+      console.error("신청 실패 상세:", error.response);
+      
+      const errorMessage = error.response?.data?.message || "신청 처리 중 오류가 발생했습니다.";
+      alert(errorMessage);
+    }
   };
 
   if (!program) {
@@ -86,19 +152,25 @@ const ProgramApplication = () => {
           <HeaderTitle>프로그램 신청</HeaderTitle>
         </HeaderLeft>
         <HeaderRight>
-          <UserInfo>관평동 김유성 접속중</UserInfo>
-          <LogoutButton>로그아웃</LogoutButton>
+        <UserInfo>{dongName} {formData.name}님 접속중</UserInfo>
+        <LogoutButton onClick={() => {
+            localStorage.clear();
+            navigate("/");
+          }}>로그아웃</LogoutButton>
         </HeaderRight>
       </Header>
 
       <Content>
         {/* 프로그램 정보 카드 */}
         <ProgramCard>
-          <ProgramTitle>{program.title}</ProgramTitle>
+          <ProgramTitle>{program.programName}</ProgramTitle>
           <ProgramMeta>
-            {program.place} | {program.tuition} | {program.recruitment} | 일시{" "}
-            {formatPeriod(program.startDate, program.endDate)} (
-            {program.schedule})
+            {program.eduPlace} | {program.eduPrice === 0 ? "무료" : `${program.eduPrice.toLocaleString()}원`} | 일시 {formatPeriod(program.eduStartDate, program.eduEndDate)} ({program.eduTime})
+          </ProgramMeta>
+          
+          <ProgramMeta style={{ marginTop: "8px", color: "#1557b7", fontWeight: "600" }}>
+            현재 신청 현황: {applicantCount} / {program.capacity}명 
+            {applicantCount >= program.capacity ? " (정원 마감)" : " (신청 가능)"}
           </ProgramMeta>
         </ProgramCard>
 

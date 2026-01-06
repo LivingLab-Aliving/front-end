@@ -52,17 +52,80 @@ const DongPage = () => {
         setLoading(true);
         const adminId = localStorage.getItem("adminId");
 
+        const requestParams = {
+          dongName: dongName,
+          adminId: adminId,
+        };
+
+        // 디버깅: 요청 파라미터 출력
+        console.log(`========== [관리자] API 요청 파라미터 ==========`);
+        console.log("요청 URL:", `http://localhost:8080/api/program`);
+        console.log("요청 파라미터:", requestParams);
+        console.log("동 이름:", dongName);
+        console.log("관리자 ID:", adminId);
+        console.log("==============================================");
+
         const response = await axios.get(`http://localhost:8080/api/program`, {
-          params: {
-            dongName: dongName,
-            adminId: adminId,
-          },
+          params: requestParams,
         });
 
-        console.log("백엔드 응답:", response.data);
+        // 디버깅: 전체 응답 출력
+        console.log(`========== [관리자] API 응답 ==========`);
+        console.log("전체 응답:", response.data);
+        console.log("응답 데이터:", response.data?.data);
+        if (response.data?.data?.content) {
+          console.log(`프로그램 개수: ${response.data.data.content.length}`);
+          console.log(`전체 요소 수: ${response.data.data.totalElements || 0}`);
+        }
+        console.log("=====================================");
 
         if (response.data?.data?.content) {
           const backendData = response.data.data.content;
+
+          // 콘솔에 프로그램 목록 상세 출력
+          console.log(
+            `========== [관리자] ${dongName} 프로그램 목록 ==========`
+          );
+          console.log(
+            `전체 프로그램 수: ${response.data.data.totalElements || 0}`
+          );
+          console.log(`현재 받은 프로그램 수: ${backendData.length}개`);
+          console.log(`프로그램 목록:`);
+          backendData.forEach((program, index) => {
+            console.log(
+              `${index + 1}. [ID: ${program.programId}] ${program.programName}`
+            );
+            console.log(`   - 동 이름: ${program.dongName || "-"}`);
+            console.log(
+              `   - 프로그램 타입: ${
+                program.programType === "AUTONOMOUS" ? "자치형" : "유성형"
+              }`
+            );
+            console.log(`   - 장소: ${program.eduPlace || "-"}`);
+            console.log(
+              `   - 수강료: ${
+                program.eduPrice === 0 ? "무료" : `${program.eduPrice}원`
+              }`
+            );
+            console.log(`   - 정원: ${program.capacity}명`);
+            console.log(
+              `   - 교육기간: ${program.eduStartDate || "-"} ~ ${
+                program.eduEndDate || "-"
+              }`
+            );
+            console.log(
+              `   - 모집기간: ${program.recruitStartDate || "-"} ~ ${
+                program.recruitEndDate || "-"
+              }`
+            );
+            console.log(`   - 교육시간: ${program.eduTime || "-"}`);
+            console.log(`   - 대상: ${program.targetAudience || "-"}`);
+            console.log(`   - 분기: ${program.quarter || "-"}`);
+            console.log(`   - 썸네일: ${program.thumbnailUrl || "없음"}`);
+            console.log(`   - 강사: ${program.instructorName || "-"}`);
+            console.log("");
+          });
+          console.log("==========================================");
 
           const mappedPrograms = backendData.map((p) => ({
             id: p.programId,
@@ -82,6 +145,8 @@ const DongPage = () => {
 
           setPrograms(mappedPrograms);
           setFilteredPrograms(mappedPrograms);
+        } else {
+          console.log(`[관리자] ${dongName}에 프로그램이 없습니다.`);
         }
       } catch (error) {
         console.error("프로그램 목록 로드 실패:", error);
@@ -148,12 +213,15 @@ const DongPage = () => {
     <PageContainer>
       {/* 헤더 */}
       <AdminHeader>
-        <LogoContainer>
+        <LogoContainer
+          onClick={() => navigate("/admin/home")}
+          style={{ cursor: "pointer" }}
+        >
           <LogoSvg />
         </LogoContainer>
         <HeaderRight>
           <DateInfo>
-            {getFormattedDate()} {dongName} 관리자 {adminName} 접속중
+            {getFormattedDate()} {dongName} 관리자 접속중
           </DateInfo>
           <LogoutButton onClick={handleLogout}>로그아웃</LogoutButton>
         </HeaderRight>
@@ -329,7 +397,6 @@ const ContentContainer = styled.div`
 
 const NewProgramSection = styled.section`
   margin-bottom: 60px;
-  text-align: center;
 `;
 
 const SectionTitle = styled.h2`
@@ -342,11 +409,10 @@ const SectionTitle = styled.h2`
 
 const NewProgramCard = styled.div`
   width: 100%;
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 80px 40px;
-  background-color: #ffffff;
-  border: 2px solid #37b7ec;
+  max-width: 300px;
+  padding: 60px 30px;
+  background-color: rgba(224, 243, 250, 0.2);
+  border: 1px solid #37b7ec;
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -366,14 +432,14 @@ const NewProgramCard = styled.div`
 const PlusIcon = styled.div`
   font-size: 64px;
   font-weight: 300;
-  color: #37b7ec;
+  color: #006b97;
   line-height: 1;
 `;
 
 const CardText = styled.p`
   font-size: 18px;
-  font-weight: 600;
-  color: #333;
+  font-weight: 400;
+  color: #006b97;
   font-family: "Pretendard", sans-serif;
 `;
 

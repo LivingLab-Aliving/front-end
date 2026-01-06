@@ -2,9 +2,129 @@ import React, { useState } from "react";
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 import CharacterImageSrc from "../../assets/character.svg";
-// TODO: 이미지 파일 추가 필요
-// import MapImageSrc from "../../assets/map.svg";
-// import SpeechBubbleImageSrc from "../../assets/speech_bubble.svg";
+import SpeechBubbleImageSrc from "../../assets/speech_bubble.svg";
+import 전체Map from "../../assets/map/전체.svg";
+// import 진잠동Map from "../../assets/map/진잠동.svg";
+// import 학하동Map from "../../assets/map/학하동.svg";
+// import 노은1동Map from "../../assets/map/노은1동.svg";
+// import 노은2동Map from "../../assets/map/노은2동.svg";
+// import 노은3동Map from "../../assets/map/노은3동.svg";
+// import 온천1동Map from "../../assets/map/온천1동.svg";
+// import 온천2동Map from "../../assets/map/온천2동.svg";
+// import 상대동Map from "../../assets/map/상대동.svg";
+// import 원신흥동Map from "../../assets/map/원신흥동.svg";
+// import 신성동Map from "../../assets/map/신성동.svg";
+// import 전민동Map from "../../assets/map/전민동.svg";
+// import 관평동Map from "../../assets/map/관평동.svg";
+// import 구즉동Map from "../../assets/map/구즉동.svg";
+
+// 지도 SVG 배치 설정
+// const MAP_CONFIG = [
+//   {
+//     name: "진잠동",
+//     src: 진잠동Map,
+//     width: "245.537px",
+//     height: "223.393px",
+//     left: "473px",
+//     top: "631.6821px",
+//   },
+//   {
+//     name: "학하동",
+//     src: 학하동Map,
+//     width: "185.892px",
+//     height: "141.3px",
+//     left: "517.0996px",
+//     top: "535.5947px",
+//   },
+//   {
+//     name: "노은1동",
+//     src: 노은1동Map,
+//     width: "170px",
+//     height: "115.527px",
+//     left: "534.0366px",
+//     top: "465.835px",
+//   },
+//   {
+//     name: "노은2동",
+//     src: 노은2동Map,
+//     width: "143.692px",
+//     height: "157.054px",
+//     left: "554.3965px",
+//     top: "336.8076px",
+//   },
+//   {
+//     name: "노은3동",
+//     src: 노은3동Map,
+//     width: "105.854px",
+//     height: "90.395px",
+//     left: "551.8286px",
+//     top: "416.207px",
+//   },
+//   {
+//     name: "온천1동",
+//     src: 온천1동Map,
+//     width: "152.592px",
+//     height: "71.903px",
+//     left: "620.0361px",
+//     top: "521.9595px",
+//   },
+//   {
+//     name: "온천2동",
+//     src: 온천2동Map,
+//     width: "151.858px",
+//     height: "87.333px",
+//     left: "664.6777px",
+//     top: "469.8618px",
+//   },
+//   {
+//     name: "상대동",
+//     src: 상대동Map,
+//     width: "54.361px",
+//     height: "43.203px",
+//     left: "672.5947px",
+//     top: "589.3618px",
+//   },
+//   {
+//     name: "원신흥동",
+//     src: 원신흥동Map,
+//     width: "50.455px",
+//     height: "62.899px",
+//     left: "704.0698px",
+//     top: "574.0938px",
+//   },
+//   {
+//     name: "신성동",
+//     src: 신성동Map,
+//     width: "202.448px",
+//     height: "205.942px",
+//     left: "670.5313px",
+//     top: "305.2739px",
+//   },
+//   {
+//     name: "전민동",
+//     src: 전민동Map,
+//     width: "98.863px",
+//     height: "117.731px",
+//     left: "817.2217px",
+//     top: "377.8618px",
+//   },
+//   {
+//     name: "관평동",
+//     src: 관평동Map,
+//     width: "110.472px",
+//     height: "96.881px",
+//     left: "810px",
+//     top: "290.0908px",
+//   },
+//   {
+//     name: "구즉동",
+//     src: 구즉동Map,
+//     width: "168.154px",
+//     height: "256.626px",
+//     left: "713.5703px",
+//     top: "97px",
+//   },
+// ];
 
 // 동 버튼 배치
 const DONG_BUTTONS_CONFIG = [
@@ -12,12 +132,12 @@ const DONG_BUTTONS_CONFIG = [
   { name: "진잠동", left: "calc(56.25% + 100px)", top: "570px" },
   { name: "원신흥동", left: "calc(68.75% + 0px)", top: "570px" },
   { name: "온천1동", left: "calc(81.25% - 100px)", top: "570px" },
-  { name: "온천2동", left: "calc(87.5% - 80px)", top: "570px" },
+  { name: "온천2동", left: "calc(87.5% - 95px)", top: "570px" },
   // Row 2: top: 638px
   { name: "신성동", left: "calc(56.25% + 100px)", top: "638px" },
   { name: "전민동", left: "calc(68.75% + 0px)", top: "638px" },
   { name: "구즉동", left: "calc(81.25% - 100px)", top: "638px" },
-  { name: "관평동", left: "calc(87.5% - 80px)", top: "638px" },
+  { name: "관평동", left: "calc(87.5% - 95px)", top: "638px" },
   // Row 3: top: 706px
   { name: "노은1동", left: "calc(56.25% + 100px)", top: "706px" },
   { name: "노은2동", left: "calc(68.75% + 0px)", top: "706px" },
@@ -26,7 +146,7 @@ const DONG_BUTTONS_CONFIG = [
 
 const HomePage = () => {
   const navigate = useNavigate();
-  const [activeDong, setActiveDong] = useState("관평동");
+  const [activeDong, setActiveDong] = useState(null);
 
   const handleDongClick = (dongName) => {
     setActiveDong(dongName);
@@ -38,16 +158,43 @@ const HomePage = () => {
       {/* 하늘색 배경 */}
       <BackgroundShape />
 
+      {/* 지도 SVG들 */}
+      <MapContainer>
+        <FullMapSvg
+          src={전체Map}
+          alt="전체 지도"
+          style={{
+            left: "473px",
+            top: "95px",
+            width: "451px",
+            height: "762px",
+          }}
+        />
+        {/* {MAP_CONFIG.map((map) => (
+          <MapSvg
+            key={map.name}
+            src={map.src}
+            alt={map.name}
+            style={{
+              width: map.width,
+              height: map.height,
+              left: map.left,
+              top: map.top,
+            }}
+            onClick={() => handleDongClick(map.name)}
+          />
+        ))} */}
+      </MapContainer>
+
       {/* 말풍선 */}
-      {/* TODO: speech_bubble.svg 파일이 assets 폴더에 필요합니다 */}
-      {/* <ChatBubbleContainer>
+      <ChatBubbleContainer>
         <ChatBubbleImage src={SpeechBubbleImageSrc} alt="" />
         <ChatBubbleText>
           지도에서 <HighlightText>원하는 동을 클릭</HighlightText>해서
           <br />
           동별 프로그램을 확인해요!
         </ChatBubbleText>
-      </ChatBubbleContainer> */}
+      </ChatBubbleContainer>
 
       {/* 캐릭터 */}
       <CharacterContainer>
@@ -92,8 +239,8 @@ const PageContainer = styled.section`
   position: relative;
   width: 100%;
   max-width: 1920px;
-  margin: 0 0 auto 0;
-  height: 906px; /* 1080 - 64(header) - 110(footer) */
+  margin: auto;
+  height: 100vh;
   background: #fff;
   overflow: hidden;
 `;
@@ -107,6 +254,33 @@ const BackgroundShape = styled.div`
   background: #e0f3fa;
   opacity: 0.7;
   border-radius: 0 40% 40% 0;
+  z-index: 1;
+`;
+
+const MapContainer = styled.div`
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 51.5%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+`;
+
+const MapSvg = styled.img`
+  position: absolute;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+
+  &:hover {
+    opacity: 0.8;
+  }
+`;
+
+const FullMapSvg = styled.img`
+  position: absolute;
+  pointer-events: auto;
 `;
 
 const ChatBubbleContainer = styled.div`
@@ -146,8 +320,8 @@ const CharacterContainer = styled.div`
   position: absolute;
   left: 279px;
   top: 580px; /* 644 - 64(header) */
-  width: 174px;
-  height: 194px;
+  width: 120px;
+  height: 134px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -155,10 +329,10 @@ const CharacterContainer = styled.div`
 `;
 
 const CharacterImage = styled.img`
-  width: 184.08%;
-  height: 165.81%;
+  width: 130%;
+  height: 130%;
   max-width: none;
-  transform: rotate(180deg) scaleY(-1);
+  object-fit: contain;
 `;
 
 const TitleContainer = styled.div`

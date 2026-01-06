@@ -1,11 +1,14 @@
 import React, { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import styled from "styled-components";
+import axios from "axios";
 import { ReactComponent as ArrowLeft } from "../../assets/icon/arrow_left.svg";
 
 const ApplicationCreate = () => {
   const { dongName } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const programId = searchParams.get("programId"); // 기존 프로그램 ID (있으면 수정 모드)
 
   // 신청서 데이터
   const [formData, setFormData] = useState({
@@ -39,32 +42,33 @@ const ApplicationCreate = () => {
   };
 
   const handleFieldChange = (id, field, value) => {
-    setAdditionalFields(prev => 
-      prev.map(item => 
-        item.id === id ? { ...item, [field]: value } : item
-      )
+    setAdditionalFields((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
     );
   };
 
   const handleAddOption = (fieldId) => {
-    setAdditionalFields(prev => 
-      prev.map(item => 
-        item.id === fieldId 
-          ? { ...item, options: [...item.options, { id: Date.now(), text: "" }] }
+    setAdditionalFields((prev) =>
+      prev.map((item) =>
+        item.id === fieldId
+          ? {
+              ...item,
+              options: [...item.options, { id: Date.now(), text: "" }],
+            }
           : item
       )
     );
   };
 
   const handleOptionChange = (fieldId, optionId, value) => {
-    setAdditionalFields(prev => 
-      prev.map(item => 
-        item.id === fieldId 
-          ? { 
-              ...item, 
-              options: item.options.map(opt => 
+    setAdditionalFields((prev) =>
+      prev.map((item) =>
+        item.id === fieldId
+          ? {
+              ...item,
+              options: item.options.map((opt) =>
                 opt.id === optionId ? { ...opt, text: value } : opt
-              )
+              ),
             }
           : item
       )
@@ -72,38 +76,84 @@ const ApplicationCreate = () => {
   };
 
   const handleRemoveOption = (fieldId, optionId) => {
-    setAdditionalFields(prev => 
-      prev.map(item => 
-        item.id === fieldId 
-          ? { ...item, options: item.options.filter(opt => opt.id !== optionId) }
+    setAdditionalFields((prev) =>
+      prev.map((item) =>
+        item.id === fieldId
+          ? {
+              ...item,
+              options: item.options.filter((opt) => opt.id !== optionId),
+            }
           : item
       )
     );
   };
 
   const handleRemoveField = (id) => {
-    setAdditionalFields(prev => prev.filter(item => item.id !== id));
+    setAdditionalFields((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     const applicationFormData = {
       basicFields: formData,
       additionalFields: additionalFields,
       createdAt: new Date().toISOString(),
     };
-    
+
+    // 기존 프로그램에 신청폼 연결하는 경우
+    if (programId) {
+      try {
+        const adminId = localStorage.getItem("adminId");
+
+        // 백엔드 API 형식에 맞게 변환
+        const formItems = additionalFields.map((field) => ({
+          label: field.label || "",
+          type: field.type === "text" ? "TEXT" : "RADIO",
+          required: field.required || false,
+          options:
+            field.options?.map((opt) =>
+              typeof opt === "string" ? opt : opt.text
+            ) || [],
+        }));
+
+        // 신청폼 생성 API 호출
+        const response = await axios.post(
+          `http://localhost:8080/api/program/${programId}/form`,
+          {
+            formItems: formItems,
+          },
+          {
+            params: { adminId: adminId },
+          }
+        );
+
+        console.log("신청폼 생성 성공:", response.data);
+        alert("신청폼이 프로그램에 연결되었습니다.");
+
+        // 프로그램 수정 페이지로 돌아가기
+        navigate(`/admin/dong/${dongName}/edit/${programId}`);
+      } catch (error) {
+        console.error("신청폼 생성 실패:", error);
+        alert("신청폼 생성 중 오류가 발생했습니다.");
+      }
+      return;
+    }
+
+    // 새 프로그램 생성용 신청폼 (기존 로직)
     // 생성된 폼 데이터를 sessionStorage에 임시 저장
     const tempFormId = `temp_${Date.now()}`;
-    sessionStorage.setItem('tempApplicationForm', JSON.stringify({
-      id: tempFormId,
-      ...applicationFormData
-    }));
-    
+    sessionStorage.setItem(
+      "tempApplicationForm",
+      JSON.stringify({
+        id: tempFormId,
+        ...applicationFormData,
+      })
+    );
+
     console.log("생성된 신청폼 데이터:", applicationFormData);
     alert("신청폼이 생성되었습니다.");
-    
+
     // 프로그램 생성 페이지로 돌아가면서 폼 ID 전달
     navigate(`/admin/dong/${dongName}/add?tempFormId=${tempFormId}`);
   };
@@ -112,7 +162,15 @@ const ApplicationCreate = () => {
     <Container>
       <Header>
         <HeaderLeft>
-          <BackButton onClick={() => navigate(-1)}>
+          <BackButton
+            onClick={() => {
+              if (programId) {
+                navigate(`/admin/dong/${dongName}/edit/${programId}`);
+              } else {
+                navigate(-1);
+              }
+            }}
+          >
             <ArrowLeft />
           </BackButton>
           <DocumentIcon>
@@ -126,7 +184,9 @@ const ApplicationCreate = () => {
               <path d="M320-240h320v-80H320v80Zm0-160h320v-80H320v80ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm280-520v-200H240v640h480v-440H520ZM240-800v200-200 640-640Z" />
             </svg>
           </DocumentIcon>
-          <HeaderTitle>신청폼 만들기</HeaderTitle>
+          <HeaderTitle>
+            {programId ? "신청폼 만들기 (기존 프로그램)" : "신청폼 만들기"}
+          </HeaderTitle>
         </HeaderLeft>
       </Header>
 
@@ -199,11 +259,15 @@ const ApplicationCreate = () => {
                       type="text"
                       placeholder="질문명 (예: 특이사항, 경력사항 등)"
                       value={field.label}
-                      onChange={(e) => handleFieldChange(field.id, 'label', e.target.value)}
+                      onChange={(e) =>
+                        handleFieldChange(field.id, "label", e.target.value)
+                      }
                     />
                     <FieldTypeSelect
                       value={field.type}
-                      onChange={(e) => handleFieldChange(field.id, 'type', e.target.value)}
+                      onChange={(e) =>
+                        handleFieldChange(field.id, "type", e.target.value)
+                      }
                     >
                       <option value="text">단답형</option>
                       <option value="radio">객관식</option>
@@ -212,11 +276,19 @@ const ApplicationCreate = () => {
                       <input
                         type="checkbox"
                         checked={field.required}
-                        onChange={(e) => handleFieldChange(field.id, 'required', e.target.checked)}
+                        onChange={(e) =>
+                          handleFieldChange(
+                            field.id,
+                            "required",
+                            e.target.checked
+                          )
+                        }
                       />
                       <span>필수</span>
                     </RequiredCheckbox>
-                    <RemoveFieldButton onClick={() => handleRemoveField(field.id)}>
+                    <RemoveFieldButton
+                      onClick={() => handleRemoveField(field.id)}
+                    >
                       삭제
                     </RemoveFieldButton>
                   </FieldHeaderRow>
@@ -233,9 +305,19 @@ const ApplicationCreate = () => {
                           type="text"
                           placeholder="옵션 텍스트"
                           value={option.text}
-                          onChange={(e) => handleOptionChange(field.id, option.id, e.target.value)}
+                          onChange={(e) =>
+                            handleOptionChange(
+                              field.id,
+                              option.id,
+                              e.target.value
+                            )
+                          }
                         />
-                        <RemoveOptionButton onClick={() => handleRemoveOption(field.id, option.id)}>
+                        <RemoveOptionButton
+                          onClick={() =>
+                            handleRemoveOption(field.id, option.id)
+                          }
+                        >
                           ×
                         </RemoveOptionButton>
                       </OptionRow>
@@ -267,11 +349,22 @@ const ApplicationCreate = () => {
       </Content>
 
       <SubmitButtonWrapper>
-        <CancelButton type="button" onClick={() => navigate(-1)}>
+        <CancelButton
+          type="button"
+          onClick={() => {
+            if (programId) {
+              // 기존 프로그램 수정 모드면 수정 페이지로
+              navigate(`/admin/dong/${dongName}/edit/${programId}`);
+            } else {
+              // 새 프로그램 생성 모드면 이전 페이지로
+              navigate(-1);
+            }
+          }}
+        >
           취소
         </CancelButton>
         <SubmitButton type="button" onClick={handleSubmit}>
-          신청폼 생성
+          {programId ? "신청폼 연결" : "신청폼 생성"}
         </SubmitButton>
       </SubmitButtonWrapper>
     </Container>
@@ -395,13 +488,13 @@ const FormInput = styled.input`
   font-size: 14px;
   color: #373736;
   background: #fff;
-  
+
   &:focus {
     outline: none;
     border-color: #0085bc;
     box-shadow: 0 0 0 2px rgba(0, 133, 188, 0.1);
   }
-  
+
   &::placeholder {
     color: #878786;
   }
@@ -447,13 +540,13 @@ const AdditionalFieldInput = styled.input`
   font-size: 14px;
   color: #373736;
   background: #fff;
-  
+
   &:focus {
     outline: none;
     border-color: #0085bc;
     box-shadow: 0 0 0 2px rgba(0, 133, 188, 0.1);
   }
-  
+
   &::placeholder {
     color: #878786;
   }
@@ -466,7 +559,7 @@ const FieldTypeSelect = styled.select`
   font-size: 14px;
   background: #fff;
   min-width: 100px;
-  
+
   &:focus {
     outline: none;
     border-color: #0085bc;
@@ -481,7 +574,7 @@ const RequiredCheckbox = styled.label`
   color: #333;
   white-space: nowrap;
   cursor: pointer;
-  
+
   input[type="checkbox"] {
     width: 16px;
     height: 16px;
@@ -541,7 +634,7 @@ const OptionInput = styled.input`
   border: 1px solid #d2d6db;
   border-radius: 4px;
   font-size: 14px;
-  
+
   &:focus {
     outline: none;
     border-color: #0085bc;
@@ -560,7 +653,7 @@ const RemoveOptionButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  
+
   &:hover {
     background: #ff3742;
   }
@@ -574,7 +667,7 @@ const AddOptionButton = styled.button`
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
-  
+
   &:hover {
     background: #f0f9ff;
   }
@@ -603,7 +696,7 @@ const PreviewInput = styled.input`
   border-radius: 4px;
   font-size: 14px;
   background: #f9f9f9;
-  
+
   &:disabled {
     cursor: not-allowed;
   }

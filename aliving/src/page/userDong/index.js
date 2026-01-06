@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
+import axios from "axios";
 import UnknownImage from "../../assets/unknown_image.svg";
 import { ReactComponent as ShareIcon } from "../../assets/icon/share.svg";
 import { ReactComponent as HeartIcon } from "../../assets/icon/heart.svg";
@@ -18,86 +19,179 @@ import { formatPeriod, calculateDaysRemaining } from "../../util/utils";
 const UserDongPage = () => {
   const { dongName } = useParams();
   const navigate = useNavigate();
+
+  const [programs, setPrograms] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState("");
-  const [programType, setProgramType] = useState("유성구청 프로그램");
+  const [programType, setProgramType] = useState("YUSEONG");
   const [targetAudience, setTargetAudience] = useState("전체");
   const [tuitionFilter, setTuitionFilter] = useState("전체");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
 
-  const programs = useMemo(() => PROGRAMS_BY_DONG[dongName] || [], [dongName]);
+  const fetchPrograms = async () => {
+    try {
+      setLoading(true);
+      const userId = localStorage.getItem("userId");
 
-  const filteredPrograms = useMemo(() => {
-    return programs.filter((program) => {
-      if (program.type !== programType) {
-        return false;
+      // API 파라미터 구성
+      const params = {
+        userId: userId,
+        page: currentPage - 1,
+        size: PROGRAMS_PER_PAGE,
+        sort: "createdAt,desc",
+        dongName: dongName,
+        programType: programType, // 프로그램 타입 필터 추가
+      };
+
+      // 검색어가 있으면 추가
+      if (keyword.trim()) {
+        params.keyword = keyword.trim();
       }
 
-      if (
-        targetAudience !== "전체" &&
-        program.targetAudience !== targetAudience
-      ) {
-        return false;
+      // 교육대상 필터 (전체가 아닐 때만)
+      if (targetAudience && targetAudience !== "전체") {
+        params.targetAudience = targetAudience;
       }
 
-      if (tuitionFilter === "무료" && program.tuition !== "무료") {
-        return false;
+      // 수강료 필터 (전체가 아닐 때만)
+      if (tuitionFilter && tuitionFilter !== "전체") {
+        params.tuitionFilter = tuitionFilter;
       }
 
-      if (tuitionFilter === "유료" && program.tuition === "무료") {
-        return false;
+      // 교육기간 필터
+      if (startDate) {
+        params.startDate = startDate;
+      }
+      if (endDate) {
+        params.endDate = endDate;
       }
 
-      if (keyword && !program.title.includes(keyword.trim())) {
-        return false;
-      }
+      // 디버깅: 요청 파라미터 출력
+      console.log(`========== API 요청 파라미터 ==========`);
+      console.log("요청 URL:", `http://localhost:8080/api/program`);
+      console.log("요청 파라미터:", params);
+      console.log("=====================================");
 
-      if (startDate && new Date(program.endDate) < new Date(startDate)) {
-        return false;
-      }
+      const response = await axios.get(`http://localhost:8080/api/program`, {
+        params: params,
+      });
 
-      if (endDate && new Date(program.startDate) > new Date(endDate)) {
-        return false;
+      // 디버깅: 전체 응답 출력
+      console.log(`========== API 응답 ==========`);
+      console.log("전체 응답:", response.data);
+      console.log("응답 데이터:", response.data?.data);
+      if (response.data?.data?.content) {
+        console.log(
+          "응답 프로그램들의 dongName:",
+          response.data.data.content.map((p) => ({
+            id: p.programId,
+            name: p.programName,
+            dongName: p.dongName,
+          }))
+        );
       }
+      console.log("=============================");
 
-      return true;
-    });
-  }, [
-    programs,
-    programType,
-    targetAudience,
-    tuitionFilter,
-    keyword,
-    startDate,
-    endDate,
-  ]);
+      const { content, totalElements } = response.data.data;
+
+      // 콘솔에 프로그램 목록 출력
+      console.log(`========== ${dongName} 프로그램 목록 ==========`);
+      console.log(`전체 프로그램 수: ${totalElements}`);
+      console.log(
+        `현재 페이지: ${currentPage} (페이지당 ${PROGRAMS_PER_PAGE}개)`
+      );
+      console.log(
+        `프로그램 타입: ${
+          programType === "YUSEONG" ? "유성구청 프로그램" : "자치형 프로그램"
+        }`
+      );
+      console.log(`프로그램 목록 (${content.length}개):`);
+      content.forEach((program, index) => {
+        console.log(
+          `${index + 1}. [ID: ${program.programId}] ${program.programName}`
+        );
+        console.log(`   - 장소: ${program.eduPlace || "-"}`);
+        console.log(
+          `   - 수강료: ${
+            program.eduPrice === 0 ? "무료" : `${program.eduPrice}원`
+          }`
+        );
+        console.log(`   - 정원: ${program.capacity}명`);
+        console.log(
+          `   - 교육기간: ${program.eduStartDate || "-"} ~ ${
+            program.eduEndDate || "-"
+          }`
+        );
+        console.log(
+          `   - 모집기간: ${program.recruitStartDate || "-"} ~ ${
+            program.recruitEndDate || "-"
+          }`
+        );
+        console.log(`   - 교육시간: ${program.eduTime || "-"}`);
+        console.log(`   - 대상: ${program.targetAudience || "-"}`);
+        console.log(`   - 썸네일: ${program.thumbnailUrl || "없음"}`);
+        console.log(`   - 좋아요: ${program.isLiked ? "✓" : "✗"}`);
+        console.log("");
+      });
+      console.log("==========================================");
+
+      setPrograms(content);
+      setTotalElements(totalElements);
+    } catch (error) {
+      console.error("프로그램 목록을 불러오는데 실패했습니다.", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    setCurrentPage(1);
+    fetchPrograms();
   }, [
-    dongName,
     programType,
+    currentPage,
+    dongName,
+    keyword,
     targetAudience,
     tuitionFilter,
-    keyword,
     startDate,
     endDate,
   ]);
 
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredPrograms.length / PROGRAMS_PER_PAGE)
-  );
-  const paginatedPrograms = filteredPrograms.slice(
-    (currentPage - 1) * PROGRAMS_PER_PAGE,
-    currentPage * PROGRAMS_PER_PAGE
-  );
+  const totalPages = Math.max(1, Math.ceil(totalElements / PROGRAMS_PER_PAGE));
 
   const handlePageChange = (page) => {
     if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
   };
+
+  const handleLikeToggle = async (e, programId) => {
+    e.stopPropagation();
+    const userId = localStorage.getItem("userId");
+    if (!userId) {
+      alert("로그인이 필요한 기능입니다.");
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        `http://localhost:8080/api/program/${programId}/like`,
+        null,
+        {
+          params: { userId: userId },
+        }
+      );
+
+      console.log(response.data);
+      fetchPrograms();
+    } catch (error) {
+      console.error("좋아요 처리 실패", error);
+    }
+  };
+
+  if (loading && currentPage === 1) return <Container>로딩 중...</Container>;
 
   return (
     <Container>
@@ -176,19 +270,21 @@ const UserDongPage = () => {
       </FilterSection>
 
       <TabSection>
-        {PROGRAM_TYPES.map((type) => (
-          <TabButton
-            key={type}
-            type="button"
-            $active={programType === type}
-            onClick={() => setProgramType(type)}
-          >
-            {type}
-          </TabButton>
-        ))}
+        <TabButton
+          $active={programType === "YUSEONG"}
+          onClick={() => setProgramType("YUSEONG")}
+        >
+          유성구청 프로그램
+        </TabButton>
+        <TabButton
+          $active={programType === "AUTONOMOUS"}
+          onClick={() => setProgramType("AUTONOMOUS")}
+        >
+          자치형 프로그램
+        </TabButton>
       </TabSection>
 
-      {paginatedPrograms.length === 0 ? (
+      {programs.length === 0 ? (
         <EmptyState>
           <EmptyTitle>등록된 프로그램이 없습니다.</EmptyTitle>
           <EmptyDescription>
@@ -198,22 +294,22 @@ const UserDongPage = () => {
       ) : (
         <>
           <ProgramList>
-            {paginatedPrograms.map((program) => {
+            {programs.map((program) => {
               const badgeInfo = calculateDaysRemaining(
-                program.startDate,
-                program.endDate
+                program.recruitStartDate,
+                program.recruitEndDate
               );
               return (
                 <ProgramItem
-                  key={program.id}
+                  key={program.programId}
                   onClick={() =>
-                    navigate(`/dong/${dongName}/program/${program.id}`)
+                    navigate(`/dong/${dongName}/program/${program.programId}`)
                   }
                 >
                   <ImageWrapper>
                     <ProgramImage
-                      src={UnknownImage}
-                      alt={`${program.title} 썸네일`}
+                      src={program.thumbnailUrl || UnknownImage}
+                      alt={`${program.programName} 썸네일`}
                     />
                   </ImageWrapper>
                   <ProgramContent>
@@ -223,17 +319,22 @@ const UserDongPage = () => {
                     {badgeInfo.type === "closed" && (
                       <DaysBadge $closed={true}>모집마감</DaysBadge>
                     )}
-                    <ProgramTitle>{program.title}</ProgramTitle>
+                    <ProgramTitle>{program.programName}</ProgramTitle>
                     <ProgramMeta>
-                      <span>{program.place}</span>
-                      <Divider />
-                      <span>{program.tuition}</span>
-                      <Divider />
-                      <span>{program.recruitment}</span>
+                      <span>{program.eduPlace}</span>
                       <Divider />
                       <span>
-                        일시 {formatPeriod(program.startDate, program.endDate)}{" "}
-                        ({program.schedule})
+                        {program.eduPrice === 0
+                          ? "무료"
+                          : `${program.eduPrice}원`}
+                      </span>
+                      <Divider />
+                      <span>정원 {program.capacity}명</span>
+                      <Divider />
+                      <span>
+                        일시{" "}
+                        {formatPeriod(program.eduStartDate, program.eduEndDate)}{" "}
+                        ({program.eduTime})
                       </span>
                     </ProgramMeta>
                   </ProgramContent>
@@ -241,8 +342,18 @@ const UserDongPage = () => {
                     <IconButton type="button" aria-label="공유">
                       <ShareIcon />
                     </IconButton>
-                    <IconButton type="button" aria-label="좋아요">
-                      <HeartIcon />
+                    <IconButton
+                      type="button"
+                      aria-label="좋아요"
+                      onClick={(e) => handleLikeToggle(e, program.programId)}
+                    >
+                      <HeartIcon
+                        style={{
+                          fill: program.isLiked ? "#FF5A5A" : "none",
+                          stroke: program.isLiked ? "#FF5A5A" : "#878786",
+                          transition: "all 0.2s ease",
+                        }}
+                      />
                     </IconButton>
                   </IconButtons>
                 </ProgramItem>

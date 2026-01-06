@@ -264,7 +264,13 @@ const ProgramEditPage = () => {
         description: formData.detailInfo,
         eduTime: eduTime,
         targetAudience: formData.recruitmentLimit,
+        dongName: dongName, // dongName 추가
       };
+
+      console.log("=== 프로그램 수정 요청 ===");
+      console.log("수정할 데이터:", updateData);
+      console.log("dongName:", dongName);
+      console.log("========================");
 
       // 파일이 있으면 FormData로 전송
       if (formData.attachment && formData.attachment instanceof File) {

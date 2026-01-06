@@ -1,23 +1,40 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import styled from "styled-components";
+import axios from "axios";
 
 const SignupPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const kakaoData = location.state?.kakaoInfo;
+
+  console.log(kakaoData);
+  
   const [step, setStep] = useState(1);
   const [agreeAll, setAgreeAll] = useState(false);
+  const [addressFile, setAddressFile] = useState(null);
+  const [exemptionFile, setExemptionFile] = useState(null);
+
   const [formData, setFormData] = useState({
-    name: "김유성",
-    email: "yuseong123@naver.com",
-    birthDate: "1999.10.24",
-    phone: "010-1234-5678",
-    gender: "female",
+    name: kakaoData?.name || "",
+    email: kakaoData?.email || "",
+    birthDate: kakaoData?.birth || "", 
+    phone: kakaoData?.phone || "",
+    gender: kakaoData?.gender || "male",
     address: "",
-    exemption: "",
+    exemption: "none",
     emailSubscribe: "no",
     smsSubscribe: "no",
     snsSubscribe: "no",
   });
+
+  useEffect(() => {
+    if (!kakaoData && step !== 3) {
+      alert("카카오 로그인을 먼저 해주세요.");
+      navigate("/");
+    }
+  }, [kakaoData, navigate, step]);
 
   const handleAgreeAllChange = (e) => {
     setAgreeAll(e.target.checked);
@@ -26,8 +43,6 @@ const SignupPage = () => {
   const handleNextStep = () => {
     if (step === 1 && agreeAll) {
       setStep(2);
-    } else if (step === 2) {
-      setStep(3);
     }
   };
 
@@ -36,17 +51,58 @@ const SignupPage = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleTargetGroupChange = (group) => {
-    setFormData((prev) => {
-      const newGroups = prev.targetGroups.includes(group)
-        ? prev.targetGroups.filter((g) => g !== group)
-        : [...prev.targetGroups, group];
-      return { ...prev, targetGroups: newGroups };
-    });
+  const handleFileChange = (e, setFile) => {
+    if (e.target.files.length > 0) {
+      setFile(e.target.files[0]);
+    }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    try {
+      const userId = kakaoData?.userId;
+
+      if (!userId) {
+        alert("사용자 식별 정보가 없습니다. 다시 로그인 해주세요.");
+        return;
+      }
+
+      const response = await axios.post(`http://localhost:8080/api/user/${userId}/complete-signup`, formData);
+
+      if (addressFile) {
+        const addrFormData = new FormData();
+        addrFormData.append("files", addressFile);
+        await axios.post(`http://localhost:8080/api/user/${userId}/documents?type=ADDRESS_PROOF`, addrFormData);
+      }
+      
+      if (formData.exemption !== "none" && exemptionFile) {
+        const exempFormData = new FormData();
+        exempFormData.append("files", exemptionFile);
+        await axios.post(`http://localhost:8080/api/user/${userId}/documents?type=CERTIFICATE`, exempFormData);
+      }
+
+      if (response.data.userId) {
+        const result = response.data.data;
+        
+        localStorage.setItem("token", `${kakaoData.grantType} ${kakaoData.accessToken}`);
+        localStorage.setItem("username", kakaoData.name);
+                
+        localStorage.setItem("userId", String(userId));
+        
     setStep(3);
+      }
+
+    } catch (error) {
+      console.error(error);
+      alert("가입 처리 중 오류가 발생했습니다.");
+    }
+  };
+
+  const getExemptionLabel = (val) => {
+    const labels = {
+      none: "해당없음", basic: "기초생활수급자", veteran: "국가유공자", 
+      senior: "만 65세 이상", disabled: "장애인"
+    };
+    return labels[val] || "";
   };
 
   const handleGoHome = () => {
@@ -160,7 +216,7 @@ const SignupPage = () => {
 
             <ButtonWrapper>
               <SubmitButton onClick={handleNextStep} disabled={!agreeAll}>
-                약관 전체동의
+                약관 동의
               </SubmitButton>
             </ButtonWrapper>
           </StepContent>
@@ -175,25 +231,25 @@ const SignupPage = () => {
                 <FormRow>
                   <FormLabel>성명</FormLabel>
                   <FormData>
-                    <ReadOnlyText>김유성</ReadOnlyText>
+                    <ReadOnlyText>{formData.name}</ReadOnlyText>
                   </FormData>
                 </FormRow>
                 <FormRow>
                   <FormLabel>이메일</FormLabel>
                   <FormData>
-                    <ReadOnlyText>yuseong123@naver.com</ReadOnlyText>
+                    <ReadOnlyText>{formData.email}</ReadOnlyText>
                   </FormData>
                 </FormRow>
                 <FormRow>
                   <FormLabel>생년월일</FormLabel>
                   <FormData>
-                    <ReadOnlyText>1999.10.24</ReadOnlyText>
+                    <ReadOnlyText>{formData.birthDate}</ReadOnlyText>
                   </FormData>
                 </FormRow>
                 <FormRow>
                   <FormLabel>전화번호</FormLabel>
                   <FormData>
-                    <ReadOnlyText>010-1234-5678</ReadOnlyText>
+                    <ReadOnlyText>{formData.phone}</ReadOnlyText>
                   </FormData>
                 </FormRow>
                 <FormRow>
@@ -238,7 +294,7 @@ const SignupPage = () => {
                       <AddressButton type="button">주소찾기</AddressButton>
                     </AddressRow>
                     <FileRow>
-                      <FileButton type="button">
+                      <FileButton type="button" onClick={() => document.getElementById('addressFileInput')?.click()}>
                         <FileIcon>
                           <svg
                             width="16"
@@ -251,6 +307,12 @@ const SignupPage = () => {
                         </FileIcon>
                         파일 선택
                       </FileButton>
+                      <input
+                        id="addressFileInput"
+                        type="file"
+                        style={{ display: 'none' }}
+                        onChange={(e) => handleFileChange(e, setAddressFile)}
+                      />
                       <HintText>
                         *거주지 확인을 위해, 반드시{" "}
                         <HintLink>3개월 이내 발행된 주민등록 등본을</HintLink>{" "}
@@ -262,72 +324,17 @@ const SignupPage = () => {
                 <FormRow>
                   <FormLabel>면제 대상 여부</FormLabel>
                   <FormData>
-                    <RadioGroup style={{ flexWrap: "wrap", gap: "16px" }}>
-                      <RadioLabel>
-                        <RadioInput
-                          type="radio"
-                          name="exemption"
-                          value="basic"
-                          checked={formData.exemption === "basic"}
-                          onChange={handleInputChange}
-                        />
-                        <RadioText>국민기초생활수급자</RadioText>
+                    <RadioGroup style={{flexWrap: 'wrap', gap: '10px'}}>
+                      {["none", "basic", "senior", "disabled"].map((t) => (
+                        <RadioLabel key={t}>
+                          <RadioInput type="radio" name="exemption" value={t} checked={formData.exemption === t} onChange={handleInputChange} />
+                          <RadioText>{getExemptionLabel(t)}</RadioText>
                       </RadioLabel>
-                      <RadioLabel>
-                        <RadioInput
-                          type="radio"
-                          name="exemption"
-                          value="veteran"
-                          checked={formData.exemption === "veteran"}
-                          onChange={handleInputChange}
-                        />
-                        <RadioText>국가유공자 및 가족</RadioText>
-                      </RadioLabel>
-                      <RadioLabel>
-                        <RadioInput
-                          type="radio"
-                          name="exemption"
-                          value="single"
-                          checked={formData.exemption === "single"}
-                          onChange={handleInputChange}
-                        />
-                        <RadioText>한부모가정</RadioText>
-                      </RadioLabel>
-                      <RadioLabel>
-                        <RadioInput
-                          type="radio"
-                          name="exemption"
-                          value="multi"
-                          checked={formData.exemption === "multi"}
-                          onChange={handleInputChange}
-                        />
-                        <RadioText>다자녀가정 부모 및 자녀</RadioText>
-                      </RadioLabel>
+                      ))}
                     </RadioGroup>
-                    <RadioGroup style={{ marginTop: "8px", gap: "16px" }}>
-                      <RadioLabel>
-                        <RadioInput
-                          type="radio"
-                          name="exemption"
-                          value="senior"
-                          checked={formData.exemption === "senior"}
-                          onChange={handleInputChange}
-                        />
-                        <RadioText>만 65세 이상</RadioText>
-                      </RadioLabel>
-                      <RadioLabel>
-                        <RadioInput
-                          type="radio"
-                          name="exemption"
-                          value="disabled"
-                          checked={formData.exemption === "disabled"}
-                          onChange={handleInputChange}
-                        />
-                        <RadioText>장애의 정도가 심한 장애인</RadioText>
-                      </RadioLabel>
-                    </RadioGroup>
+
                     <FileRow style={{ marginTop: "12px" }}>
-                      <FileButton type="button">
+                      <FileButton type="button" onClick={() => document.getElementById('exemptionFileInput')?.click()}>
                         <FileIcon>
                           <svg
                             width="16"
@@ -340,6 +347,12 @@ const SignupPage = () => {
                         </FileIcon>
                         파일 선택
                       </FileButton>
+                      <input
+                        id="exemptionFileInput"
+                        type="file"
+                        style={{ display: 'none' }}
+                        onChange={(e) => handleFileChange(e, setExemptionFile)}
+                      />
                       <HintText>
                         *감면대상 해당 시, 반드시 관련 증빙 서류를 제출해주세요.
                       </HintText>

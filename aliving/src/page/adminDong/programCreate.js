@@ -4,6 +4,10 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import styled from "styled-components";
 import axios from "axios";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { ReactComponent as LogoSvg } from "../../assets/logo.svg";
+import { ReactComponent as ArrowLeft } from "../../assets/icon/arrow_left.svg";
 import { saveApplicationForm } from "../../assets/data/applicationForms";
 
 const ProgramCreatePage = () => {
@@ -11,10 +15,38 @@ const ProgramCreatePage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
+  // dongName 디버깅
+  useEffect(() => {
+    console.log("=== ProgramCreatePage 마운트 ===");
+    console.log("URL에서 추출한 dongName:", dongName);
+    console.log("dongName 타입:", typeof dongName);
+    console.log("dongName이 있는지:", !!dongName);
+    console.log("================================");
+  }, [dongName]);
+
   const [isDuplicateChecked, setIsDuplicateChecked] = useState(false);
   const [applicationFormId, setApplicationFormId] = useState(null);
   const [applicationFormData, setApplicationFormData] = useState(null);
   const [showFormPreview, setShowFormPreview] = useState(false);
+  const [adminName, setAdminName] = useState("나과정");
+
+  // 날짜 포맷팅 (예: 2025.11.13. (목))
+  const getFormattedDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    const days = ["일", "월", "화", "수", "목", "금", "토"];
+    const dayOfWeek = days[today.getDay()];
+    return `${year}.${month}.${day}. (${dayOfWeek})`;
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("isAdminLoggedIn");
+    localStorage.removeItem("adminId");
+    navigate("/admin/login");
+  };
 
   const [formData, setFormData] = useState({
     programName: "",
@@ -24,7 +56,11 @@ const ProgramCreatePage = () => {
     scheduleEndMinute: "00",
     quarter: "",
     educationPeriodStart: "",
+    educationPeriodStartHour: "00",
+    educationPeriodStartMinute: "00",
     educationPeriodEnd: "",
+    educationPeriodEndHour: "23",
+    educationPeriodEndMinute: "59",
     recruitmentPeriodStart: "",
     recruitmentPeriodStartHour: "09",
     recruitmentPeriodStartMinute: "00",
@@ -81,6 +117,29 @@ const ProgramCreatePage = () => {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
+    }));
+  };
+
+  // 날짜를 Date 객체로 변환하는 헬퍼 함수
+  const parseDateString = (dateString) => {
+    if (!dateString) return null;
+    return new Date(dateString);
+  };
+
+  // Date 객체를 YYYY-MM-DD 형식으로 변환하는 헬퍼 함수
+  const formatDateString = (date) => {
+    if (!date) return "";
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  // 날짜 변경 핸들러
+  const handleDateChange = (name, date) => {
+    setFormData((prev) => ({
+      ...prev,
+      [name]: formatDateString(date),
     }));
   };
 
@@ -148,10 +207,10 @@ const ProgramCreatePage = () => {
       const eduTime = `${formData.scheduleStartHour}:${formData.scheduleStartMinute}-${formData.scheduleEndHour}:${formData.scheduleEndMinute}`;
 
       // 날짜를 LocalDateTime 형식으로 변환 (ISO 8601 형식)
-      const formatDateTime = (dateStr) => {
+      const formatDateTime = (dateStr, hour = "00", minute = "00") => {
         if (!dateStr) return null;
         // "2025-01-15" 형식을 "2025-01-15T00:00:00" 형식으로 변환
-        return `${dateStr}T00:00:00`;
+        return `${dateStr}T${hour}:${minute}:00`;
       };
 
       // targetAudience를 enum 값으로 변환
@@ -171,25 +230,60 @@ const ProgramCreatePage = () => {
         return "ALL"; // 기본값
       };
 
+      // dongName 확인 및 검증
+      const currentDongName = dongName || "";
+      console.log("=== handleSubmit 시작 ===");
+      console.log("dongName 원본:", dongName);
+      console.log("dongName 현재값:", currentDongName);
+      console.log(
+        "dongName이 비어있는지:",
+        !currentDongName || currentDongName.trim() === ""
+      );
+
+      if (!currentDongName || currentDongName.trim() === "") {
+        alert("동 이름이 없습니다. 올바른 경로로 접근해주세요.");
+        navigate(`/admin/dong`);
+        return;
+      }
+
+      const trimmedDongName = currentDongName.trim();
+      console.log("사용할 dongName (trimmed):", trimmedDongName);
+
       // 프로그램 생성 데이터 준비 (백엔드 DTO 필드명에 맞춰서 매핑)
       const programDataForBackend = {
         programName: formData.programName.trim(),
         quarter: formData.quarter ? parseInt(formData.quarter) : null,
-        eduStartDate: formatDateTime(formData.educationPeriodStart),
-        eduEndDate: formatDateTime(formData.educationPeriodEnd),
-        recruitStartDate: formatDateTime(formData.recruitmentPeriodStart),
-        recruitEndDate: formatDateTime(formData.recruitmentPeriodEnd),
+        eduStartDate: formatDateTime(
+          formData.educationPeriodStart,
+          formData.educationPeriodStartHour,
+          formData.educationPeriodStartMinute
+        ),
+        eduEndDate: formatDateTime(
+          formData.educationPeriodEnd,
+          formData.educationPeriodEndHour,
+          formData.educationPeriodEndMinute
+        ),
+        recruitStartDate: formatDateTime(
+          formData.recruitmentPeriodStart,
+          formData.recruitmentPeriodStartHour,
+          formData.recruitmentPeriodStartMinute
+        ),
+        recruitEndDate: formatDateTime(
+          formData.recruitmentPeriodEnd,
+          formData.recruitmentPeriodEndHour,
+          formData.recruitmentPeriodEndMinute
+        ),
         eduPlace: formData.location.trim(),
         programType: formData.category === "자치형" ? "AUTONOMOUS" : "YUSEONG",
         capacity: formData.capacity ? parseInt(formData.capacity) : 0,
         eduPrice: formData.fee ? parseInt(formData.fee) : 0,
         needs: formData.materials || "",
-        institution: formData.institution || dongName,
+        institution: formData.institution || trimmedDongName,
         instructorId: null, // 백엔드는 instructorId를 사용
         description: formData.detailInfo || "",
         eduTime: eduTime,
         targetAudience: getTargetAudienceEnum(formData.recruitmentLimit), // enum 값으로 변환
-        dongName: dongName,
+        dongName: trimmedDongName, // 확실히 전송되도록 trim된 값 사용
         additionalFields:
           applicationFormData?.additionalFields?.map((field) => ({
             label: field.label || "",
@@ -205,6 +299,21 @@ const ProgramCreatePage = () => {
       // 디버깅: 전송할 데이터 확인
       console.log("=== 프로그램 생성 요청 ===");
       console.log("전송할 프로그램 데이터:", programDataForBackend);
+      console.log("dongName 원본:", dongName);
+      console.log("dongName trimmed:", trimmedDongName);
+      console.log(
+        "dongName이 포함되었는지:",
+        "dongName" in programDataForBackend
+      );
+      console.log("dongName 실제 값:", programDataForBackend.dongName);
+      console.log(
+        "dongName이 'none'인지:",
+        programDataForBackend.dongName === "none"
+      );
+      console.log(
+        "dongName이 undefined인지:",
+        programDataForBackend.dongName === undefined
+      );
       console.log("JSON 문자열:", JSON.stringify(programDataForBackend));
       console.log("adminId:", adminId);
       console.log(
@@ -215,14 +324,36 @@ const ProgramCreatePage = () => {
       // 백엔드는 multipart/form-data 형식을 기대함
       const formDataToSend = new FormData();
 
-      // DTO를 JSON File 객체로 변환하여 "dto" 파트로 추가
-      const dtoBlob = new Blob([JSON.stringify(programDataForBackend)], {
-        type: "application/json; charset=utf-8",
-      });
-      const dtoFile = new File([dtoBlob], "dto.json", {
+      // DTO를 JSON 문자열로 변환하여 "dto" 파트로 추가
+      const dtoJsonString = JSON.stringify(programDataForBackend);
+      console.log("=== DTO JSON 문자열 확인 ===");
+      console.log("전체 JSON:", dtoJsonString);
+      console.log("dongName 포함 여부:", dtoJsonString.includes('"dongName"'));
+      console.log(
+        "dongName 값 확인:",
+        dtoJsonString.match(/"dongName"\s*:\s*"([^"]*)"/)?.[1]
+      );
+      console.log("===========================");
+
+      // Spring Boot가 @RequestPart로 JSON을 받을 수 있도록 Blob으로 변환
+      // Content-Type을 명시적으로 설정
+      const dtoBlob = new Blob([dtoJsonString], {
         type: "application/json",
       });
-      formDataToSend.append("dto", dtoFile);
+      formDataToSend.append(
+        "dto",
+        dtoBlob,
+        "dto.json" // 파일명 지정
+      );
+
+      // Blob 내용을 다시 읽어서 확인
+      dtoBlob.text().then((text) => {
+        console.log("=== FormData에 추가된 dto 파일 내용 확인 ===");
+        console.log("파일 내용:", text);
+        const parsed = JSON.parse(text);
+        console.log("파싱된 dongName:", parsed.dongName);
+        console.log("==========================================");
+      });
 
       // 썸네일 파일이 있으면 추가
       if (formData.attachment && formData.attachment instanceof File) {
@@ -249,13 +380,33 @@ const ProgramCreatePage = () => {
         `http://localhost:8080/api/program`,
         formDataToSend,
         {
-          params: { adminId: adminId }, // 숫자로 변환된 adminId 전송
+          params: {
+            adminId: adminId, // 숫자로 변환된 adminId 전송
+            dongName: trimmedDongName, // dongName을 URL 파라미터로도 전송 (백엔드가 필요시 사용)
+          },
           // headers를 명시하지 않으면 axios가 자동으로 multipart/form-data와 boundary를 설정
         }
       );
 
       const createdProgramId = response.data.data.programId;
       console.log("생성된 프로그램 ID:", createdProgramId);
+      console.log("생성된 프로그램 전체 응답:", response.data.data);
+
+      // 생성된 프로그램 조회해서 dongName 확인
+      try {
+        const checkResponse = await axios.get(
+          `http://localhost:8080/api/program/${createdProgramId}`,
+          {
+            params: { adminId },
+          }
+        );
+        console.log("=== 생성된 프로그램 확인 ===");
+        console.log("프로그램 상세 정보:", checkResponse.data.data);
+        console.log("dongName 값:", checkResponse.data.data.dongName);
+        console.log("===========================");
+      } catch (checkError) {
+        console.error("생성된 프로그램 확인 실패:", checkError);
+      }
 
       // 파일이 있으면 업로드
       if (formData.attachment && formData.attachment instanceof File) {
@@ -312,7 +463,25 @@ const ProgramCreatePage = () => {
 
       if (error.response) {
         // 서버 응답이 있는 경우
-        if (error.response.status === 415) {
+        if (error.response.status === 500) {
+          // 백엔드 에러 메시지가 있으면 표시
+          const backendMessage =
+            error.response.data?.message || "서버 내부 오류가 발생했습니다.";
+
+          if (backendMessage.includes("관리자 없음")) {
+            errorMessage =
+              "관리자 정보를 찾을 수 없습니다.\n\n데이터베이스가 리셋되었을 수 있습니다.\n다시 로그인해주세요.";
+            // localStorage 정리 후 로그인 페이지로 이동
+            localStorage.removeItem("adminId");
+            localStorage.removeItem("isAdminLoggedIn");
+            localStorage.removeItem("token");
+            setTimeout(() => {
+              navigate("/admin/login");
+            }, 2000);
+          } else {
+            errorMessage = `서버 오류: ${backendMessage}\n\n관리자에게 문의하세요.`;
+          }
+        } else if (error.response.status === 415) {
           errorMessage =
             "서버가 요청 형식을 지원하지 않습니다. (415 오류)\n\n콘솔을 확인하여 전송된 데이터를 확인해주세요.";
         } else if (error.response.data?.message) {
@@ -336,6 +505,10 @@ const ProgramCreatePage = () => {
     navigate(`/admin/dong/${dongName}`);
   };
 
+  const handleBack = () => {
+    navigate(`/admin/dong/${dongName}`);
+  };
+
   const handleDuplicateCheck = () => {
     // TODO: 실제 API 호출로 프로그램명 중복 체크
     setIsDuplicateChecked(true);
@@ -349,8 +522,27 @@ const ProgramCreatePage = () => {
 
   return (
     <PageContainer>
+      <AdminHeader>
+        <LogoContainer
+          onClick={() => navigate("/admin/home")}
+          style={{ cursor: "pointer" }}
+        >
+          <LogoSvg />
+        </LogoContainer>
+        <HeaderRight>
+          <DateInfo>
+            {getFormattedDate()} {dongName} 관리자 접속중
+          </DateInfo>
+          <LogoutButton onClick={handleLogout}>로그아웃</LogoutButton>
+        </HeaderRight>
+      </AdminHeader>
       <Inner>
-        <Title>새 프로그램 추가</Title>
+        <TitleSection>
+          <BackButton onClick={handleBack}>
+            <ArrowLeft />
+          </BackButton>
+          <Title>프로그램 생성</Title>
+        </TitleSection>
 
         <Form onSubmit={handleSubmit}>
           {/* 프로그램 기본 설정 */}
@@ -358,7 +550,9 @@ const ProgramCreatePage = () => {
             <SectionTitle>프로그램 기본 설정</SectionTitle>
 
             <TableRow>
-              <FieldLabel>프로그램명</FieldLabel>
+              <FieldLabel>
+                <RequiredMark>*</RequiredMark>프로그램명
+              </FieldLabel>
               <FieldValue>
                 <InputWithButton>
                   <Input
@@ -381,7 +575,9 @@ const ProgramCreatePage = () => {
             </TableRow>
 
             <TableRow>
-              <FieldLabel>교육일정</FieldLabel>
+              <FieldLabel>
+                <RequiredMark>*</RequiredMark>교육일정
+              </FieldLabel>
               <FieldValue>
                 <TimeRangeWrapper>
                   <TimeSelectGroup>
@@ -442,7 +638,9 @@ const ProgramCreatePage = () => {
             </TableRow>
 
             <TableRow>
-              <FieldLabel>분기</FieldLabel>
+              <FieldLabel>
+                <RequiredMark>*</RequiredMark>분기
+              </FieldLabel>
               <FieldValue>
                 <Select
                   id="quarter"
@@ -460,40 +658,254 @@ const ProgramCreatePage = () => {
             </TableRow>
 
             <TableRow>
-              <FieldLabel>교육기간</FieldLabel>
+              <FieldLabel>
+                <RequiredMark>*</RequiredMark>교육기간
+              </FieldLabel>
               <FieldValue>
-                <DateRangeWrapper>
-                  <Input
-                    id="educationPeriodStart"
-                    name="educationPeriodStart"
-                    type="date"
-                    value={formData.educationPeriodStart}
-                    onChange={handleChange}
-                  />
+                <DateTimeRangeWrapper>
+                  <DateRangeWrapper>
+                    <DatePickerWrapper>
+                      <CalendarIcon>
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 20 20"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <rect
+                            x="3"
+                            y="4"
+                            width="14"
+                            height="13"
+                            rx="1"
+                            stroke="#666"
+                            strokeWidth="1.5"
+                            fill="none"
+                          />
+                          <line
+                            x1="3"
+                            y1="8"
+                            x2="17"
+                            y2="8"
+                            stroke="#666"
+                            strokeWidth="1.5"
+                          />
+                          <line
+                            x1="7"
+                            y1="2"
+                            x2="7"
+                            y2="6"
+                            stroke="#666"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                          />
+                          <line
+                            x1="13"
+                            y1="2"
+                            x2="13"
+                            y2="6"
+                            stroke="#666"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      </CalendarIcon>
+                      <StyledDatePicker
+                        selected={parseDateString(
+                          formData.educationPeriodStart
+                        )}
+                        onChange={(date) =>
+                          handleDateChange("educationPeriodStart", date)
+                        }
+                        dateFormat="yyyy-MM-dd"
+                        placeholderText="날짜 선택"
+                        showPopperArrow={false}
+                      />
+                    </DatePickerWrapper>
+                    <TimeSelectGroup>
+                      <TimeSelect
+                        name="educationPeriodStartHour"
+                        value={formData.educationPeriodStartHour}
+                        onChange={handleChange}
+                      >
+                        {Array.from({ length: 24 }, (_, i) => (
+                          <option key={i} value={String(i).padStart(2, "0")}>
+                            {String(i).padStart(2, "0")}
+                          </option>
+                        ))}
+                      </TimeSelect>
+                      <TimeLabel>시</TimeLabel>
+                      <TimeSelect
+                        name="educationPeriodStartMinute"
+                        value={formData.educationPeriodStartMinute}
+                        onChange={handleChange}
+                      >
+                        {["00", "10", "20", "30", "40", "50"].map((min) => (
+                          <option key={min} value={min}>
+                            {min}
+                          </option>
+                        ))}
+                      </TimeSelect>
+                      <TimeLabel>분</TimeLabel>
+                    </TimeSelectGroup>
+                  </DateRangeWrapper>
                   <Separator>~</Separator>
-                  <Input
-                    id="educationPeriodEnd"
-                    name="educationPeriodEnd"
-                    type="date"
-                    value={formData.educationPeriodEnd}
-                    onChange={handleChange}
-                  />
-                </DateRangeWrapper>
+                  <DateRangeWrapper>
+                    <DatePickerWrapper>
+                      <CalendarIcon>
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 20 20"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <rect
+                            x="3"
+                            y="4"
+                            width="14"
+                            height="13"
+                            rx="1"
+                            stroke="#666"
+                            strokeWidth="1.5"
+                            fill="none"
+                          />
+                          <line
+                            x1="3"
+                            y1="8"
+                            x2="17"
+                            y2="8"
+                            stroke="#666"
+                            strokeWidth="1.5"
+                          />
+                          <line
+                            x1="7"
+                            y1="2"
+                            x2="7"
+                            y2="6"
+                            stroke="#666"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                          />
+                          <line
+                            x1="13"
+                            y1="2"
+                            x2="13"
+                            y2="6"
+                            stroke="#666"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      </CalendarIcon>
+                      <StyledDatePicker
+                        selected={parseDateString(formData.educationPeriodEnd)}
+                        onChange={(date) =>
+                          handleDateChange("educationPeriodEnd", date)
+                        }
+                        dateFormat="yyyy-MM-dd"
+                        placeholderText="날짜 선택"
+                        showPopperArrow={false}
+                      />
+                    </DatePickerWrapper>
+                    <TimeSelectGroup>
+                      <TimeSelect
+                        name="educationPeriodEndHour"
+                        value={formData.educationPeriodEndHour}
+                        onChange={handleChange}
+                      >
+                        {Array.from({ length: 24 }, (_, i) => (
+                          <option key={i} value={String(i).padStart(2, "0")}>
+                            {String(i).padStart(2, "0")}
+                          </option>
+                        ))}
+                      </TimeSelect>
+                      <TimeLabel>시</TimeLabel>
+                      <TimeSelect
+                        name="educationPeriodEndMinute"
+                        value={formData.educationPeriodEndMinute}
+                        onChange={handleChange}
+                      >
+                        {["00", "10", "20", "30", "40", "50"].map((min) => (
+                          <option key={min} value={min}>
+                            {min}
+                          </option>
+                        ))}
+                      </TimeSelect>
+                      <TimeLabel>분</TimeLabel>
+                    </TimeSelectGroup>
+                  </DateRangeWrapper>
+                </DateTimeRangeWrapper>
               </FieldValue>
             </TableRow>
 
             <TableRow>
-              <FieldLabel>모집기간</FieldLabel>
+              <FieldLabel>
+                <RequiredMark>*</RequiredMark>모집기간
+              </FieldLabel>
               <FieldValue>
                 <DateTimeRangeWrapper>
                   <DateRangeWrapper>
-                    <Input
-                      id="recruitmentPeriodStart"
-                      name="recruitmentPeriodStart"
-                      type="date"
-                      value={formData.recruitmentPeriodStart}
-                      onChange={handleChange}
-                    />
+                    <DatePickerWrapper>
+                      <CalendarIcon>
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 20 20"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <rect
+                            x="3"
+                            y="4"
+                            width="14"
+                            height="13"
+                            rx="1"
+                            stroke="#666"
+                            strokeWidth="1.5"
+                            fill="none"
+                          />
+                          <line
+                            x1="3"
+                            y1="8"
+                            x2="17"
+                            y2="8"
+                            stroke="#666"
+                            strokeWidth="1.5"
+                          />
+                          <line
+                            x1="7"
+                            y1="2"
+                            x2="7"
+                            y2="6"
+                            stroke="#666"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                          />
+                          <line
+                            x1="13"
+                            y1="2"
+                            x2="13"
+                            y2="6"
+                            stroke="#666"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      </CalendarIcon>
+                      <StyledDatePicker
+                        selected={parseDateString(
+                          formData.recruitmentPeriodStart
+                        )}
+                        onChange={(date) =>
+                          handleDateChange("recruitmentPeriodStart", date)
+                        }
+                        dateFormat="yyyy-MM-dd"
+                        placeholderText="날짜 선택"
+                        showPopperArrow={false}
+                      />
+                    </DatePickerWrapper>
                     <TimeSelectGroup>
                       <TimeSelect
                         name="recruitmentPeriodStartHour"
@@ -523,13 +935,65 @@ const ProgramCreatePage = () => {
                   </DateRangeWrapper>
                   <Separator>~</Separator>
                   <DateRangeWrapper>
-                    <Input
-                      id="recruitmentPeriodEnd"
-                      name="recruitmentPeriodEnd"
-                      type="date"
-                      value={formData.recruitmentPeriodEnd}
-                      onChange={handleChange}
-                    />
+                    <DatePickerWrapper>
+                      <CalendarIcon>
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 20 20"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <rect
+                            x="3"
+                            y="4"
+                            width="14"
+                            height="13"
+                            rx="1"
+                            stroke="#666"
+                            strokeWidth="1.5"
+                            fill="none"
+                          />
+                          <line
+                            x1="3"
+                            y1="8"
+                            x2="17"
+                            y2="8"
+                            stroke="#666"
+                            strokeWidth="1.5"
+                          />
+                          <line
+                            x1="7"
+                            y1="2"
+                            x2="7"
+                            y2="6"
+                            stroke="#666"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                          />
+                          <line
+                            x1="13"
+                            y1="2"
+                            x2="13"
+                            y2="6"
+                            stroke="#666"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      </CalendarIcon>
+                      <StyledDatePicker
+                        selected={parseDateString(
+                          formData.recruitmentPeriodEnd
+                        )}
+                        onChange={(date) =>
+                          handleDateChange("recruitmentPeriodEnd", date)
+                        }
+                        dateFormat="yyyy-MM-dd"
+                        placeholderText="날짜 선택"
+                        showPopperArrow={false}
+                      />
+                    </DatePickerWrapper>
                     <TimeSelectGroup>
                       <TimeSelect
                         name="recruitmentPeriodEndHour"
@@ -562,7 +1026,9 @@ const ProgramCreatePage = () => {
             </TableRow>
 
             <TableRow>
-              <FieldLabel>교육장소</FieldLabel>
+              <FieldLabel>
+                <RequiredMark>*</RequiredMark>교육장소
+              </FieldLabel>
               <FieldValue>
                 <Input
                   id="location"
@@ -575,7 +1041,9 @@ const ProgramCreatePage = () => {
             </TableRow>
 
             <TableRow>
-              <FieldLabel>분류</FieldLabel>
+              <FieldLabel>
+                <RequiredMark>*</RequiredMark>분류
+              </FieldLabel>
               <FieldValue>
                 <Select
                   id="category"
@@ -592,7 +1060,9 @@ const ProgramCreatePage = () => {
             </TableRow>
 
             <TableRow>
-              <FieldLabel>신청인원</FieldLabel>
+              <FieldLabel>
+                <RequiredMark>*</RequiredMark>신청인원
+              </FieldLabel>
               <FieldValue>
                 <CapacityWrapper>
                   <InputWithUnit>
@@ -702,7 +1172,9 @@ const ProgramCreatePage = () => {
             )}
 
             <TableRow>
-              <FieldLabel>수강료</FieldLabel>
+              <FieldLabel>
+                <RequiredMark>*</RequiredMark>수강료
+              </FieldLabel>
               <FieldValue>
                 <InputWithUnit>
                   <Input
@@ -718,7 +1190,9 @@ const ProgramCreatePage = () => {
             </TableRow>
 
             <TableRow>
-              <FieldLabel>학습자준비물</FieldLabel>
+              <FieldLabel>
+                <RequiredMark>*</RequiredMark>학습자준비물
+              </FieldLabel>
               <FieldValue>
                 <Input
                   id="materials"
@@ -731,7 +1205,9 @@ const ProgramCreatePage = () => {
             </TableRow>
 
             <TableRow>
-              <FieldLabel>교육기관/모집제한</FieldLabel>
+              <FieldLabel>
+                <RequiredMark>*</RequiredMark>교육기관/모집제한
+              </FieldLabel>
               <FieldValue>
                 <MultiSelectWrapper>
                   <InstitutionInput>
@@ -815,26 +1291,52 @@ const ProgramCreatePage = () => {
 
 export default ProgramCreatePage;
 
-const PageContainer = styled.section`
-  display: flex;
-  justify-content: center;
-  flex: 1;
-  padding: 48px 40px 96px;
-  background-color: #f5f6f9;
+const PageContainer = styled.div`
+  min-height: 100vh;
+  background-color: #ffffff;
 `;
 
 const Inner = styled.div`
-  width: min(1000px, 100%);
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 48px 40px 96px;
   display: flex;
   flex-direction: column;
   gap: 32px;
+`;
+
+const TitleSection = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
+const BackButton = styled.button`
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+  border-radius: 4px;
+
+  &:hover {
+    background-color: #f0f0f0;
+  }
+
+  svg {
+    width: 24px;
+    height: 24px;
+  }
 `;
 
 const Title = styled.h1`
   font-size: 28px;
   font-weight: 700;
   color: #111;
-  margin-bottom: 12px;
+  margin: 0;
   font-family: "Pretendard", sans-serif;
 `;
 
@@ -848,8 +1350,7 @@ const Form = styled.form`
 const Section = styled.div`
   background-color: #fff;
   padding: 32px;
-  border-radius: 8px;
-  border: 1px solid #d2d6db;
+  border-top: 1px solid #d2d6db;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -861,7 +1362,6 @@ const SectionTitle = styled.h2`
   color: #111;
   margin-bottom: 24px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #d2d6db;
   font-family: "Pretendard", sans-serif;
 `;
 
@@ -876,6 +1376,11 @@ const TableRow = styled.div`
   }
 `;
 
+const RequiredMark = styled.span`
+  color: #ff4d35;
+  margin-right: 2px;
+`;
+
 const FieldLabel = styled.div`
   width: 200px;
   min-width: 200px;
@@ -883,9 +1388,7 @@ const FieldLabel = styled.div`
   font-weight: 600;
   font-size: 14px;
   color: #333;
-  background-color: #f5f6f9;
-  border-right: 1px solid #d2d6db;
-  text-align: center;
+  text-align: left;
   vertical-align: middle;
   white-space: nowrap;
   font-family: "Pretendard", sans-serif;
@@ -906,14 +1409,80 @@ const WideFieldValue = styled.div`
 const DateRangeWrapper = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  flex-shrink: 0;
 `;
+
+const DatePickerWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #d0d0d0;
+  border-radius: 8px;
+  background: #fff;
+  min-width: 160px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: #1557b7;
+  }
+
+  &:focus-within {
+    border-color: #1557b7;
+    box-shadow: 0 0 0 3px rgba(21, 87, 183, 0.1);
+  }
+`;
+
+const CalendarIcon = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #666;
+`;
+
+const StyledDatePicker = styled(DatePicker)`
+  border: none;
+  outline: none;
+  font-size: 14px;
+  color: #333;
+  font-family: "Pretendard", sans-serif;
+  background: transparent;
+  width: 100%;
+  cursor: pointer;
+  padding: 0;
+
+  &::placeholder {
+    color: #999;
+  }
+
+  .react-datepicker__input-container {
+    width: 100%;
+  }
+
+  .react-datepicker__input-container input {
+    border: none;
+    outline: none;
+    background: transparent;
+    width: 100%;
+    padding: 0;
+    font-size: 14px;
+    color: #333;
+    font-family: "Pretendard", sans-serif;
+    cursor: pointer;
+  }
+`;
+
+// react-datepicker 전역 스타일은 CSS 파일로 처리
 
 const DateTimeRangeWrapper = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 8px;
+  flex-wrap: nowrap;
+  width: 100%;
 `;
 
 const MultiSelectWrapper = styled.div`
@@ -927,6 +1496,8 @@ const InstitutionInput = styled.div`
 
 const Separator = styled.span`
   color: #666;
+  margin: 0 4px;
+  flex-shrink: 0;
 `;
 
 const TimeRangeWrapper = styled.div`
@@ -938,17 +1509,18 @@ const TimeRangeWrapper = styled.div`
 const TimeSelectGroup = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
+  flex-shrink: 0;
 `;
 
 const TimeSelect = styled.select`
-  padding: 0.5rem 1rem 0.5rem 0.75rem;
+  padding: 0.5rem 0.5rem 0.5rem 0.5rem;
   border: 1px solid #d0d0d0;
   border-radius: 6px;
-  font-size: 1rem;
+  font-size: 0.9rem;
   background-color: #fff;
   cursor: pointer;
-  width: 70px;
+  width: 60px;
 
   &:focus {
     outline: none;
@@ -957,8 +1529,9 @@ const TimeSelect = styled.select`
 `;
 
 const TimeLabel = styled.span`
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   color: #666;
+  white-space: nowrap;
 `;
 
 const InputWithButton = styled.div`
@@ -1280,4 +1853,50 @@ const PreviewFooter = styled.div`
   padding-top: 12px;
   border-top: 1px solid #eee;
   font-family: "Pretendard", sans-serif;
+`;
+
+const AdminHeader = styled.header`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 40px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+`;
+
+const LogoContainer = styled.div`
+  svg {
+    height: 40px;
+    width: auto;
+  }
+`;
+
+const HeaderRight = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 20px;
+`;
+
+const DateInfo = styled.span`
+  font-size: 14px;
+  color: #333;
+  font-family: "Pretendard", sans-serif;
+`;
+
+const LogoutButton = styled.button`
+  padding: 8px 16px;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: #333;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: "Pretendard", sans-serif;
+
+  &:hover {
+    background-color: #f5f5f5;
+    border-color: #1557b7;
+  }
 `;

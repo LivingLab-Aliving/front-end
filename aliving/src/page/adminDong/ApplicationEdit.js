@@ -1,23 +1,18 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import styled from "styled-components";
-import { PROGRAMS_BY_DONG } from "../../assets/data/data";
+import axios from "axios";
 import { formatPeriod } from "../../util/utils";
-import { getApplicationFormByProgram, saveApplicationForm } from "../../assets/data/applicationForms";
+import { saveApplicationForm } from "../../assets/data/applicationForms";
 
 const ApplicationEdit = () => {
   const { dongName } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const programId = searchParams.get('programId');
+  const programId = searchParams.get("programId");
 
-  // 모든 Hook을 먼저 호출
-  // TODO: 실제 API 호출로 프로그램 정보 가져오기
-  const program = useMemo(() => {
-    if (!programId) return null;
-    const dongPrograms = PROGRAMS_BY_DONG[dongName] || [];
-    return dongPrograms.find((p) => p.id === programId);
-  }, [dongName, programId]);
+  // 프로그램 정보 상태
+  const [program, setProgram] = useState(null);
 
   // 신청서 데이터 (빈 상태로 시작)
   const [formData, setFormData] = useState({
@@ -30,35 +25,101 @@ const ApplicationEdit = () => {
 
   // 추가 필드 데이터 (신청폼 생성용)
   const [additionalFields, setAdditionalFields] = useState([]);
-  
+
   // 신청폼 존재 여부 상태
   const [hasApplicationForm, setHasApplicationForm] = useState(null); // null: 로딩중, true: 있음, false: 없음
 
-  // 기존 신청폼 불러오기 (필수)
+  // 프로그램 정보와 신청폼 불러오기
   useEffect(() => {
     if (!programId) {
       setHasApplicationForm(false);
       return;
     }
-    
-    // TODO: 실제 API 호출로 기존 신청폼 데이터 가져오기
-    const existingForm = getApplicationFormByProgram(dongName, programId);
-    
-    if (existingForm) {
-      setFormData(existingForm.basicFields || {
-        name: "",
-        address: "",
-        contact: "",
-        birthDate: "",
-        email: "",
-      });
-      setAdditionalFields(existingForm.additionalFields || []);
-      setHasApplicationForm(true);
-      console.log("기존 신청폼 불러옴:", existingForm);
-    } else {
-      setHasApplicationForm(false);
-      console.log("기존 신청폼이 없습니다.");
-    }
+
+    const fetchProgramAndForm = async () => {
+      try {
+        // 프로그램 정보 가져오기
+        const adminId = localStorage.getItem("adminId");
+        const programResponse = await axios.get(
+          `http://localhost:8080/api/program/${programId}`,
+          {
+            params: { adminId: adminId ? parseInt(adminId, 10) : null },
+          }
+        );
+
+        const programData = programResponse.data.data;
+        setProgram({
+          id: programData.programId,
+          title: programData.programName,
+          place: programData.eduPlace || "",
+          tuition:
+            programData.eduPrice === 0
+              ? "무료"
+              : `${programData.eduPrice.toLocaleString()}원`,
+          recruitment: programData.targetAudience || "전체",
+          startDate: programData.recruitStartDate,
+          endDate: programData.recruitEndDate,
+          eduStartDate: programData.eduStartDate,
+          eduEndDate: programData.eduEndDate,
+          schedule: programData.eduTime || "",
+        });
+      } catch (error) {
+        console.error("프로그램 정보 로드 실패:", error);
+      }
+
+      // 신청폼 정보 가져오기
+      const fetchApplicationForm = async () => {
+        try {
+          // 백엔드 API로 신청폼 데이터 가져오기
+          const response = await axios.get(
+            `http://localhost:8080/api/program/${programId}/form`
+          );
+
+          console.log("신청폼 API 응답:", response.data);
+
+          // 기본 필드(이름, 주소, 연락처, 생년월일, 이메일)는 항상 있으므로
+          // additionalFields가 비어있어도 신청폼이 있다고 간주
+          if (response.data?.data && Array.isArray(response.data.data)) {
+            // 백엔드 응답을 프론트엔드 형식으로 변환
+            const formItems = response.data.data;
+            const basicFields = {
+              name: "",
+              address: "",
+              contact: "",
+              birthDate: "",
+              email: "",
+            };
+            const additionalFields = formItems.map((item) => ({
+              id: item.formItemId || Date.now(),
+              label: item.label || "",
+              type: item.type === "TEXT" ? "text" : "radio",
+              required: item.required || false,
+              options: item.options || [],
+            }));
+
+            setFormData(basicFields);
+            setAdditionalFields(additionalFields);
+            setHasApplicationForm(true);
+            console.log("기존 신청폼 불러옴:", {
+              basicFields,
+              additionalFields,
+            });
+          } else {
+            // 신청폼이 없거나 빈 배열인 경우
+            setHasApplicationForm(false);
+            console.log("기존 신청폼이 없습니다. (빈 배열 또는 null)");
+          }
+        } catch (error) {
+          console.error("신청폼 조회 실패:", error);
+          // 404나 다른 에러인 경우 신청폼이 없는 것으로 간주
+          setHasApplicationForm(false);
+        }
+      };
+
+      await fetchApplicationForm();
+    };
+
+    fetchProgramAndForm();
   }, [dongName, programId]);
 
   // programId가 없거나 신청폼이 없으면 에러 처리 (Hook 호출 후)
@@ -101,8 +162,6 @@ const ApplicationEdit = () => {
     }));
   };
 
-
-
   const handleAddField = () => {
     const newField = {
       id: Date.now(),
@@ -115,32 +174,33 @@ const ApplicationEdit = () => {
   };
 
   const handleFieldChange = (id, field, value) => {
-    setAdditionalFields(prev => 
-      prev.map(item => 
-        item.id === id ? { ...item, [field]: value } : item
-      )
+    setAdditionalFields((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
     );
   };
 
   const handleAddOption = (fieldId) => {
-    setAdditionalFields(prev => 
-      prev.map(item => 
-        item.id === fieldId 
-          ? { ...item, options: [...item.options, { id: Date.now(), text: "" }] }
+    setAdditionalFields((prev) =>
+      prev.map((item) =>
+        item.id === fieldId
+          ? {
+              ...item,
+              options: [...item.options, { id: Date.now(), text: "" }],
+            }
           : item
       )
     );
   };
 
   const handleOptionChange = (fieldId, optionId, value) => {
-    setAdditionalFields(prev => 
-      prev.map(item => 
-        item.id === fieldId 
-          ? { 
-              ...item, 
-              options: item.options.map(opt => 
+    setAdditionalFields((prev) =>
+      prev.map((item) =>
+        item.id === fieldId
+          ? {
+              ...item,
+              options: item.options.map((opt) =>
                 opt.id === optionId ? { ...opt, text: value } : opt
-              )
+              ),
             }
           : item
       )
@@ -148,55 +208,67 @@ const ApplicationEdit = () => {
   };
 
   const handleRemoveOption = (fieldId, optionId) => {
-    setAdditionalFields(prev => 
-      prev.map(item => 
-        item.id === fieldId 
-          ? { ...item, options: item.options.filter(opt => opt.id !== optionId) }
+    setAdditionalFields((prev) =>
+      prev.map((item) =>
+        item.id === fieldId
+          ? {
+              ...item,
+              options: item.options.filter((opt) => opt.id !== optionId),
+            }
           : item
       )
     );
   };
 
   const handleRemoveField = (id) => {
-    setAdditionalFields(prev => prev.filter(item => item.id !== id));
+    setAdditionalFields((prev) => prev.filter((item) => item.id !== id));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     const applicationFormData = {
       programName: program?.title || "프로그램",
       basicFields: formData,
       additionalFields: additionalFields,
       updatedAt: new Date().toISOString(),
     };
-    
+
     // TODO: 실제 API 호출로 신청폼 수정 저장
-    const savedForm = saveApplicationForm(dongName, programId, applicationFormData);
+    const savedForm = saveApplicationForm(
+      dongName,
+      programId,
+      applicationFormData
+    );
     console.log("수정된 신청폼 데이터:", savedForm);
     alert("신청폼이 수정되었습니다.");
     navigate(-1);
   };
 
-
-
   return (
     <Container>
-
       <Content>
         {/* 프로그램 정보 카드 - program이 있을 때만 표시 */}
         {program && (
           <ProgramCard>
             <ProgramTitle>{program.title}</ProgramTitle>
             <ProgramMeta>
-              {program.place} | {program.tuition} | {program.recruitment} | 일시{" "}
-              {formatPeriod(program.startDate, program.endDate)} (
-              {program.schedule})
+              <MetaItem>장소: {program.place || "-"}</MetaItem>
+              <MetaItem>수강료: {program.tuition || "-"}</MetaItem>
+              <MetaItem>모집대상: {program.recruitment || "-"}</MetaItem>
+              <MetaItem>
+                교육기간:{" "}
+                {formatPeriod(program.eduStartDate, program.eduEndDate)}
+              </MetaItem>
+              <MetaItem>
+                모집기간: {formatPeriod(program.startDate, program.endDate)}
+              </MetaItem>
+              {program.schedule && (
+                <MetaItem>교육시간: {program.schedule}</MetaItem>
+              )}
             </ProgramMeta>
           </ProgramCard>
         )}
-
-
 
         {/* 이름 */}
         <FormCard>
@@ -270,11 +342,15 @@ const ApplicationEdit = () => {
                       type="text"
                       placeholder="질문명 (예: 특이사항, 경력사항 등)"
                       value={field.label}
-                      onChange={(e) => handleFieldChange(field.id, 'label', e.target.value)}
+                      onChange={(e) =>
+                        handleFieldChange(field.id, "label", e.target.value)
+                      }
                     />
                     <FieldTypeSelect
                       value={field.type}
-                      onChange={(e) => handleFieldChange(field.id, 'type', e.target.value)}
+                      onChange={(e) =>
+                        handleFieldChange(field.id, "type", e.target.value)
+                      }
                     >
                       <option value="text">단답형</option>
                       <option value="radio">객관식</option>
@@ -283,11 +359,19 @@ const ApplicationEdit = () => {
                       <input
                         type="checkbox"
                         checked={field.required}
-                        onChange={(e) => handleFieldChange(field.id, 'required', e.target.checked)}
+                        onChange={(e) =>
+                          handleFieldChange(
+                            field.id,
+                            "required",
+                            e.target.checked
+                          )
+                        }
                       />
                       <span>필수</span>
                     </RequiredCheckbox>
-                    <RemoveFieldButton onClick={() => handleRemoveField(field.id)}>
+                    <RemoveFieldButton
+                      onClick={() => handleRemoveField(field.id)}
+                    >
                       삭제
                     </RemoveFieldButton>
                   </FieldHeaderRow>
@@ -304,9 +388,19 @@ const ApplicationEdit = () => {
                           type="text"
                           placeholder="옵션 텍스트"
                           value={option.text}
-                          onChange={(e) => handleOptionChange(field.id, option.id, e.target.value)}
+                          onChange={(e) =>
+                            handleOptionChange(
+                              field.id,
+                              option.id,
+                              e.target.value
+                            )
+                          }
                         />
-                        <RemoveOptionButton onClick={() => handleRemoveOption(field.id, option.id)}>
+                        <RemoveOptionButton
+                          onClick={() =>
+                            handleRemoveOption(field.id, option.id)
+                          }
+                        >
                           ×
                         </RemoveOptionButton>
                       </OptionRow>
@@ -395,8 +489,6 @@ const BackButton = styled.button`
   }
 `;
 
-
-
 // eslint-disable-next-line
 const DocumentIcon = styled.span`
   display: flex;
@@ -464,10 +556,19 @@ const ProgramTitle = styled.h2`
   margin-bottom: 12px;
 `;
 
-const ProgramMeta = styled.p`
+const ProgramMeta = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   font-size: 14px;
-  color: #878786;
+  color: #666;
   line-height: 1.5;
+  font-family: "Pretendard", sans-serif;
+`;
+
+const MetaItem = styled.div`
+  font-size: 14px;
+  color: #333;
 `;
 
 const FormCard = styled.div`
@@ -493,13 +594,13 @@ const FormInput = styled.input`
   font-size: 14px;
   color: #373736;
   background: #fff;
-  
+
   &:focus {
     outline: none;
     border-color: #0085bc;
     box-shadow: 0 0 0 2px rgba(0, 133, 188, 0.1);
   }
-  
+
   &::placeholder {
     color: #878786;
   }
@@ -551,8 +652,6 @@ const SubmitButton = styled.button`
   }
 `;
 
-
-
 const AdditionalFieldsCard = styled.div`
   background: #fff;
   border-radius: 8px;
@@ -566,10 +665,6 @@ const AdditionalFieldsTitle = styled.h3`
   color: #373736;
   margin-bottom: 16px;
 `;
-
-
-
-
 
 const FieldContainer = styled.div`
   border: 1px solid #e0e0e0;
@@ -596,7 +691,7 @@ const FieldTypeSelect = styled.select`
   font-size: 14px;
   background: #fff;
   min-width: 100px;
-  
+
   &:focus {
     outline: none;
     border-color: #0085bc;
@@ -611,7 +706,7 @@ const RequiredCheckbox = styled.label`
   color: #333;
   white-space: nowrap;
   cursor: pointer;
-  
+
   input[type="checkbox"] {
     width: 16px;
     height: 16px;
@@ -654,7 +749,7 @@ const OptionInput = styled.input`
   border: 1px solid #d2d6db;
   border-radius: 4px;
   font-size: 14px;
-  
+
   &:focus {
     outline: none;
     border-color: #0085bc;
@@ -673,7 +768,7 @@ const RemoveOptionButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  
+
   &:hover {
     background: #ff3742;
   }
@@ -687,7 +782,7 @@ const AddOptionButton = styled.button`
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
-  
+
   &:hover {
     background: #f0f9ff;
   }
@@ -716,7 +811,7 @@ const PreviewInput = styled.input`
   border-radius: 4px;
   font-size: 14px;
   background: #f9f9f9;
-  
+
   &:disabled {
     cursor: not-allowed;
   }
@@ -730,13 +825,13 @@ const AdditionalFieldInput = styled.input`
   font-size: 14px;
   color: #373736;
   background: #fff;
-  
+
   &:focus {
     outline: none;
     border-color: #0085bc;
     box-shadow: 0 0 0 2px rgba(0, 133, 188, 0.1);
   }
-  
+
   &::placeholder {
     color: #878786;
   }

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import KakaoButtonImg from "../../assets/icon/btn_L_kakao.svg";
@@ -6,13 +6,21 @@ import KakaoButtonImg from "../../assets/icon/btn_L_kakao.svg";
 const LoginPage = () => {
   const navigate = useNavigate();
 
-  const handleKakaoLogin = () => {
-    // 카카오 로그인 처리 후 회원가입 페이지로 이동
-    navigate("/signup");
-  };
+  const REST_API_KEY = "4b7ca7f479c9a4b380da7dd62a25049e"; 
+  const REDIRECT_URI = "http://localhost:3000/oauth";  
+  const SCOPE = "account_email,name,gender,birthday,birthyear,phone_number";
 
-  const handleSignup = () => {
-    navigate("/signup");
+  const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?client_id=${REST_API_KEY}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=${SCOPE}`;
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      navigate("/home");
+    }
+  }, [navigate]);
+
+  const handleKakaoLogin = () => {
+    window.location.href = KAKAO_AUTH_URL;
   };
 
   return (
@@ -33,11 +41,11 @@ const LoginPage = () => {
         </KakaoButton>
 
         <LinkSection>
-          <LinkButton onClick={handleSignup}>회원가입</LinkButton>
+          <LinkButton onClick={() => navigate("/signup")}>회원가입</LinkButton>
           <LinkDivider>|</LinkDivider>
           <LinkItem href="#">문의하기</LinkItem>
           <LinkDivider>|</LinkDivider>
-          <LinkItem href="#">관리자 로그인</LinkItem>
+          <LinkButton onClick={() => navigate("/admin/login")}>관리자 로그인</LinkButton>
         </LinkSection>
       </Content>
     </Container>

@@ -1,146 +1,179 @@
 // src/page/adminDong/ProgramDetail.js
 
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
-import { ReactComponent as DeleteIcon } from '../../assets/icon/delete.svg';
-import { ReactComponent as SearchIcon } from '../../assets/icon/_search.svg';
-import { ReactComponent as DownloadIcon } from '../../assets/icon/download.svg';
-import { ReactComponent as GroupAddIcon } from '../../assets/icon/group_add.svg';
-import { PROGRAMS_BY_DONG } from '../../assets/data/data';
+import { useState, useEffect, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import styled from "styled-components";
+import axios from "axios";
+import { ReactComponent as DeleteIcon } from "../../assets/icon/delete.svg";
+import { ReactComponent as SearchIcon } from "../../assets/icon/_search.svg";
+import { ReactComponent as DownloadIcon } from "../../assets/icon/download.svg";
+import { ReactComponent as GroupAddIcon } from "../../assets/icon/group_add.svg";
+import { formatPeriod, formatDate } from "../../util/utils";
 
 const AdminProgramDetail = () => {
   const { dongName, programId } = useParams();
   const navigate = useNavigate();
   const [program, setProgram] = useState(null);
-  const [activeTab, setActiveTab] = useState('info');
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("info");
   const [selectedItems, setSelectedItems] = useState(new Set());
   const [selectAll, setSelectAll] = useState(false);
   const [applications, setApplications] = useState([]);
+  const [hasForm, setHasForm] = useState(false); // 신청폼 존재 여부
+  const [showOptionMenu, setShowOptionMenu] = useState(false); // 옵션 메뉴 표시 여부
+  const optionMenuRef = useRef(null); // 옵션 메뉴 참조
 
-  // TODO: 실제 API 호출로 프로그램 데이터 가져오기
+  // 백엔드 API 호출로 프로그램 데이터 가져오기
   useEffect(() => {
-    const programs = PROGRAMS_BY_DONG[dongName] || [];
-    const foundProgram = programs.find(p => p.id === programId);
-    setProgram(foundProgram);
-  }, [dongName, programId]);
+    const fetchProgramDetail = async () => {
+      try {
+        setLoading(true);
+        const adminId = localStorage.getItem("adminId");
+        const response = await axios.get(
+          `http://localhost:8080/api/program/${programId}`,
+          {
+            params: { adminId },
+          }
+        );
 
-  // TODO: 실제 API 호출로 프로그램 신청자 데이터 가져오기
-  useEffect(() => {
-    const mockApplications = [
-    { 
-      id: 1, 
-      name: '유소영', 
-      userId: 'yusoyoung123', 
-      address: '대전광역시 유성구 학하동 144', 
-      phone: '010-1234-5678', 
-      email: 'yusoyoung123@gmail.com', 
-      birthDate: '1999.03.10', 
-      discount: '-', 
-      courseType: '재수강' 
-    },
-    { 
-      id: 2, 
-      name: '이소연', 
-      userId: 'yusoyoung234', 
-      address: '대전광역시 유성구 원신흥동 125', 
-      phone: '010-1234-5678', 
-      email: 'yusoyoung123@naver.com', 
-      birthDate: '1999.03.10', 
-      discount: '-', 
-      courseType: '재수강' 
-    },
-    { 
-      id: 3, 
-      name: '이혜순', 
-      userId: 'yusoyoung245', 
-      address: '대전광역시 유성구 학하동 1차 178', 
-      phone: '010-1234-5678', 
-      email: 'yusoeng@naver.com', 
-      birthDate: '1999.03.10', 
-      discount: '-', 
-      courseType: '재수강' 
-    },
-    { 
-      id: 4, 
-      name: '곽수은', 
-      userId: 'yuseong1', 
-      address: '대전광역시 유성구 원신흥동 125', 
-      phone: '010-1234-5678', 
-      email: 'yuseong10@naver.com', 
-      birthDate: '1999.03.10', 
-      discount: '경비가족할인', 
-      courseType: '신규' 
-    },
-    { 
-      id: 5, 
-      name: '박현희', 
-      userId: 'yuseong12', 
-      address: '대전광역시 유성구 학하동 1차 117', 
-      phone: '010-1234-5678', 
-      email: 'daegeon123@gmail.com', 
-      birthDate: '1999.03.10', 
-      discount: '-', 
-      courseType: '재수강' 
-    },
-    { 
-      id: 6, 
-      name: '최도은', 
-      userId: 'yuseong13', 
-      address: '대전광역시 유성구 학하동 2차 60', 
-      phone: '010-1234-5678', 
-      email: 'daegeon567@gmail.com', 
-      birthDate: '1999.03.10', 
-      discount: '-', 
-      courseType: '신규' 
-    },
-    { 
-      id: 7, 
-      name: '손다빈', 
-      userId: 'yDaeong', 
-      address: '대전광역시 유성구 학하동 1차 178', 
-      phone: '010-1234-5678', 
-      email: 'yuseong123@naver.com', 
-      birthDate: '1999.03.10', 
-      discount: '-', 
-      courseType: '신규' 
-    },
-    { 
-      id: 8, 
-      name: '최태인', 
-      userId: 'yDaeong', 
-      address: '대전광역시 유성구 학하동 144', 
-      phone: '010-1234-5678', 
-      email: 'yun04410@naver.com', 
-      birthDate: '1999.03.10', 
-      discount: '경비가족할인', 
-      courseType: '신규' 
-    },
-    { 
-      id: 9, 
-      name: '정현진', 
-      userId: 'yDaeong34', 
-      address: '대전광역시 유성구 원신흥동 125', 
-      phone: '010-1234-5678', 
-      email: 'daegeon567@gmail.com', 
-      birthDate: '1999.03.10', 
-      discount: '-', 
-      courseType: '재수강' 
-    },
-    { 
-      id: 10, 
-      name: '조현미', 
-      userId: 'yDaeong56', 
-      address: '대전광역시 유성구 학하동 1차 168', 
-      phone: '010-1234-5678', 
-      email: 'yuseong@naver.com', 
-      birthDate: '1999.03.10', 
-      discount: '-', 
-      courseType: '재수강' 
+        console.log("프로그램 상세 데이터:", response.data.data);
+
+        const programData = response.data.data;
+
+        // 신청폼 존재 여부 확인
+        try {
+          const formResponse = await axios.get(
+            `http://localhost:8080/api/program/${programId}/form`
+          );
+          if (formResponse.data?.data && formResponse.data.data.length > 0) {
+            setHasForm(true);
+            console.log("신청폼 존재:", formResponse.data.data);
+          } else {
+            setHasForm(false);
+          }
+        } catch (error) {
+          console.log("신청폼 조회 실패 (신청폼이 없을 수 있음):", error);
+          setHasForm(false);
+        }
+
+        setProgram({
+          id: programData.programId,
+          title: programData.programName,
+          startDate: programData.recruitStartDate,
+          endDate: programData.recruitEndDate,
+          recruitStartDate: programData.recruitStartDate,
+          recruitEndDate: programData.recruitEndDate,
+          eduStartDate: programData.eduStartDate,
+          eduEndDate: programData.eduEndDate,
+          quarter: programData.quarter ? `${programData.quarter}분기` : "",
+          place: programData.eduPlace,
+          capacity: programData.capacity,
+          tuition:
+            programData.eduPrice === 0
+              ? "무료"
+              : `${programData.eduPrice.toLocaleString()}원`,
+          materials: programData.needs,
+          organization: programData.institution,
+          instructor: { name: programData.instructorName || "담당자" },
+          detailInfo: programData.description,
+          thumbnailUrl: programData.thumbnailUrl,
+          classPlanUrl: programData.classPlanUrl,
+          classPlanOriginalName: programData.classPlanOriginalName,
+          info: programData.info,
+          etc: programData.etc,
+          eduTime: programData.eduTime,
+          targetAudience: programData.targetAudience,
+          programType: programData.programType,
+          createdAt: programData.createdAt || null, // 생성일 추가
+        });
+      } catch (error) {
+        console.error("프로그램 상세 정보를 불러오는데 실패했습니다.", error);
+        alert("프로그램을 찾을 수 없습니다.");
+        navigate(`/admin/dong/${dongName}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (programId) {
+      fetchProgramDetail();
     }
-  ];
-    setApplications(mockApplications);
-  }, []);
+  }, [dongName, programId, navigate]);
+
+  // 백엔드 API 호출로 프로그램 신청자 데이터 가져오기
+  useEffect(() => {
+    const fetchApplications = async () => {
+      try {
+        const adminId = localStorage.getItem("adminId");
+        if (!adminId) {
+          console.warn("관리자 ID가 없습니다.");
+          setApplications([]);
+          return;
+        }
+
+        // 백엔드 엔드포인트: /api/program/{programId}/applications/admin
+        const response = await axios.get(
+          `http://localhost:8080/api/program/${programId}/applications/admin`
+        );
+        console.log("신청자 목록:", response.data);
+
+        if (response.data?.data) {
+          const applicantsData = Array.isArray(response.data.data)
+            ? response.data.data
+            : [];
+
+          // 백엔드 AdminListResponse 형식에 맞춰서 매핑
+          const mappedApplications = applicantsData.map((app, index) => ({
+            id: app.applicationId || index + 1,
+            name: app.userName || "",
+            userId: app.loginId || "",
+            address: app.address || "",
+            phone: app.phone || "",
+            email: app.email || "",
+            birthDate: app.birthDate || "",
+            discount: "-", // 백엔드에 discount 필드가 없음
+            courseType: "신규", // 백엔드에 courseType 필드가 없음
+            status: app.status || "",
+            createdAt: app.createdAt || "",
+          }));
+
+          setApplications(mappedApplications);
+        }
+      } catch (error) {
+        console.error("신청자 목록을 불러오는데 실패했습니다.", error);
+        // 에러가 발생해도 빈 배열로 설정
+        setApplications([]);
+      }
+    };
+
+    if (programId) {
+      fetchApplications();
+    }
+  }, [programId]);
+
+  // 옵션 메뉴 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        optionMenuRef.current &&
+        !optionMenuRef.current.contains(event.target)
+      ) {
+        setShowOptionMenu(false);
+      }
+    };
+
+    if (showOptionMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showOptionMenu]);
+
+  if (loading) {
+    return <Container>로딩 중...</Container>;
+  }
 
   if (!program) {
     return <Container>프로그램을 찾을 수 없습니다.</Container>;
@@ -152,19 +185,113 @@ const AdminProgramDetail = () => {
 
   const handleEditProgram = () => {
     navigate(`/admin/dong/${dongName}/edit/${programId}`);
+    setShowOptionMenu(false);
+  };
+
+  const handleDeleteProgram = async () => {
+    const confirmDelete = window.confirm(
+      "정말 이 프로그램을 삭제하시겠습니까?"
+    );
+    if (!confirmDelete) {
+      setShowOptionMenu(false);
+      return;
+    }
+
+    try {
+      const adminId = localStorage.getItem("adminId");
+      if (!adminId) {
+        alert("관리자 인증이 필요합니다.");
+        navigate("/admin/login");
+        return;
+      }
+
+      await axios.delete(`http://localhost:8080/api/program/${programId}`, {
+        params: { adminId: parseInt(adminId, 10) },
+      });
+
+      alert("프로그램이 삭제되었습니다.");
+      navigate(`/admin/dong/${dongName}`);
+    } catch (error) {
+      console.error("프로그램 삭제 실패:", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "프로그램 삭제 중 오류가 발생했습니다.";
+      alert(errorMessage);
+    } finally {
+      setShowOptionMenu(false);
+    }
+  };
+
+  const toggleOptionMenu = () => {
+    setShowOptionMenu(!showOptionMenu);
   };
 
   const handleAddApplication = () => {
     navigate(`/admin/dong/${dongName}/application-add?programId=${programId}`);
   };
 
+  // 엑셀 다운로드 핸들러
+  const handleExcelDownload = () => {
+    if (applications.length === 0) {
+      alert("다운로드할 신청자가 없습니다.");
+      return;
+    }
 
+    // CSV 형식으로 변환 (엑셀에서 열 수 있음)
+    const headers = [
+      "No.",
+      "성명",
+      "ID",
+      "주소",
+      "연락처",
+      "이메일",
+      "생년월일",
+      "감면여부",
+      "신규/재수강",
+    ];
+
+    const csvRows = [
+      headers.join(","),
+      ...applications.map((app, index) =>
+        [
+          index + 1,
+          app.name || "",
+          app.userId || "",
+          app.address || "",
+          app.phone || "",
+          app.email || "",
+          app.birthDate || "",
+          app.discount || "-",
+          app.courseType || "신규",
+        ]
+          .map((field) => `"${String(field).replace(/"/g, '""')}"`)
+          .join(",")
+      ),
+    ];
+
+    const csvContent = csvRows.join("\n");
+    const BOM = "\uFEFF"; // UTF-8 BOM (한글 깨짐 방지)
+    const blob = new Blob([BOM + csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${program?.title || "프로그램"}_신청자목록_${
+      new Date().toISOString().split("T")[0]
+    }.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
 
   // 체크박스 핸들러
   const handleSelectAll = (checked) => {
     setSelectAll(checked);
     if (checked) {
-      setSelectedItems(new Set(applications.map(app => app.id)));
+      setSelectedItems(new Set(applications.map((app) => app.id)));
     } else {
       setSelectedItems(new Set());
     }
@@ -183,35 +310,64 @@ const AdminProgramDetail = () => {
 
   const handleDeleteSelected = () => {
     if (selectedItems.size === 0) {
-      alert('삭제할 항목을 선택해주세요.');
+      alert("삭제할 항목을 선택해주세요.");
       return;
     }
-    
+
     // 로컬 alert 생성 - 삭제 확인 대화상자
-    const confirmDelete = window.confirm(`선택된 ${selectedItems.size}명을 삭제하시겠습니까?`);
+    const confirmDelete = window.confirm(
+      `선택된 ${selectedItems.size}명을 삭제하시겠습니까?`
+    );
     if (confirmDelete) {
       // TODO: 실제 API 호출로 선택된 신청자들 삭제
-      const updatedApplications = applications.filter(app => !selectedItems.has(app.id));
+      const updatedApplications = applications.filter(
+        (app) => !selectedItems.has(app.id)
+      );
       setApplications(updatedApplications);
-      
+
       // 로컬 alert 생성 - 삭제 완료 알림
       alert(`${selectedItems.size}명이 삭제되었습니다.`);
-      
+
       setSelectedItems(new Set());
       setSelectAll(false);
     }
   };
 
-  // 프로그램 정보에서 인원 데이터 파싱 
-  const capacityInfo = program.capacity || '22명 / 25명';
-  const [currentApplicants, maxCapacity] = capacityInfo.split(' / ').map(str => parseInt(str.replace('명', '')));
-  
+  // 프로그램 정보에서 인원 데이터 파싱
+  // 백엔드에서 capacity는 숫자로 올 수 있으므로 안전하게 처리
+  let currentApplicants = 0;
+  let maxCapacity = 0;
+
+  if (typeof program.capacity === "string") {
+    // 문자열 형식인 경우: "22명 / 25명"
+    const capacityInfo = program.capacity || "0명 / 0명";
+    const parts = capacityInfo.split(" / ");
+    if (parts.length === 2) {
+      currentApplicants = parseInt(parts[0].replace("명", "")) || 0;
+      maxCapacity = parseInt(parts[1].replace("명", "")) || 0;
+    }
+  } else if (typeof program.capacity === "number") {
+    // 숫자 형식인 경우: capacity가 최대 인원
+    maxCapacity = program.capacity || 0;
+    currentApplicants = program.currentApplicants || applications.length || 0;
+  } else {
+    // 기본값
+    maxCapacity = program.capacity || 0;
+    currentApplicants = applications.length || 0;
+  }
+
   // 통계 계산 (실제 신청자 데이터 기준)
   const totalCount = currentApplicants; // 프로그램 상세의 신청인원과 동일
   const maxCount = maxCapacity; // 모집인원
-  const newCount = applications.filter(app => app.courseType === '신규').length;
-  const returnCount = applications.filter(app => app.courseType === '재수강').length;
-  const discountCount = applications.filter(app => app.discount !== '-').length;
+  const newCount = applications.filter(
+    (app) => app.courseType === "신규"
+  ).length;
+  const returnCount = applications.filter(
+    (app) => app.courseType === "재수강"
+  ).length;
+  const discountCount = applications.filter(
+    (app) => app.discount !== "-"
+  ).length;
 
   return (
     <Container>
@@ -224,21 +380,43 @@ const AdminProgramDetail = () => {
         </HeaderInfo>
         <StatusInfo>
           <StatusLabel>모집상태</StatusLabel>
-          <StatusDate>{program.applicationPeriod || '2025.08.01 ~ 생성'}</StatusDate>
+          <StatusDate>
+            {program.recruitStartDate && program.recruitEndDate
+              ? formatPeriod(program.recruitStartDate, program.recruitEndDate)
+              : "모집기간 정보 없음"}
+          </StatusDate>
         </StatusInfo>
-        <MenuButton onClick={handleEditProgram}>⋮</MenuButton>
+        <OptionButtonContainer ref={optionMenuRef}>
+          <OptionButton onClick={toggleOptionMenu}>⋮</OptionButton>
+          {showOptionMenu && (
+            <OptionDropdown>
+              <OptionMenuItem onClick={handleEditProgram}>
+                수정하기
+              </OptionMenuItem>
+              <OptionMenuItem onClick={handleDeleteProgram}>
+                삭제하기
+              </OptionMenuItem>
+            </OptionDropdown>
+          )}
+        </OptionButtonContainer>
       </Header>
 
       <TabContainer>
-        <Tab $active={activeTab === 'info'} onClick={() => setActiveTab('info')}>
+        <Tab
+          $active={activeTab === "info"}
+          onClick={() => setActiveTab("info")}
+        >
           프로그램 상세
         </Tab>
-        <Tab $active={activeTab === 'applications'} onClick={() => setActiveTab('applications')}>
+        <Tab
+          $active={activeTab === "applications"}
+          onClick={() => setActiveTab("applications")}
+        >
           신청 현황
         </Tab>
       </TabContainer>
 
-      {activeTab === 'info' ? (
+      {activeTab === "info" ? (
         <ContentWrapper>
           <LeftSection>
             <ProgramImage>
@@ -248,8 +426,12 @@ const AdminProgramDetail = () => {
             <InstructorSection>
               <InstructorAvatar />
               <InstructorInfo>
-                <InstructorName>{program.instructor?.name || '강사명'}</InstructorName>
-                <InstructorRole>{program.instructor?.role || '강사 소개'}</InstructorRole>
+                <InstructorName>
+                  {program.instructor?.name || "강사명"}
+                </InstructorName>
+                <InstructorRole>
+                  {program.instructor?.role || "강사 소개"}
+                </InstructorRole>
               </InstructorInfo>
             </InstructorSection>
 
@@ -266,19 +448,28 @@ const AdminProgramDetail = () => {
               <tbody>
                 <InfoRow>
                   <InfoLabel>교육일정</InfoLabel>
-                  <InfoValue>{program.schedule || '월, 수 10:00~12:00'}</InfoValue>
+                  <InfoValue>
+                    {program.schedule || "월, 수 10:00~12:00"}
+                  </InfoValue>
                 </InfoRow>
                 <InfoRow>
                   <InfoLabel>분기</InfoLabel>
-                  <InfoValue>{program.quarter || '2025년 4분기'}</InfoValue>
+                  <InfoValue>{program.quarter || "2025년 4분기"}</InfoValue>
                 </InfoRow>
                 <InfoRow>
                   <InfoLabel>교육기간</InfoLabel>
-                  <InfoValue>{`${program.startDate} ~ ${program.endDate}`}</InfoValue>
+                  <InfoValue>
+                    {formatPeriod(program.eduStartDate, program.eduEndDate)}
+                  </InfoValue>
                 </InfoRow>
                 <InfoRow>
                   <InfoLabel>모집기간</InfoLabel>
-                  <InfoValue>{program.applicationPeriod || `${program.startDate} ~ ${program.endDate}`}</InfoValue>
+                  <InfoValue>
+                    {formatPeriod(
+                      program.recruitStartDate,
+                      program.recruitEndDate
+                    )}
+                  </InfoValue>
                 </InfoRow>
                 <InfoRow>
                   <InfoLabel>교육장소</InfoLabel>
@@ -286,11 +477,11 @@ const AdminProgramDetail = () => {
                 </InfoRow>
                 <InfoRow>
                   <InfoLabel>신청인원 / 모집인원</InfoLabel>
-                  <InfoValue>{program.capacity || '22명 / 25명'}</InfoValue>
+                  <InfoValue>{program.capacity || "22명 / 25명"}</InfoValue>
                 </InfoRow>
                 <InfoRow>
                   <InfoLabel>교육대상</InfoLabel>
-                  <InfoValue>{program.targetAudience || '성인'}</InfoValue>
+                  <InfoValue>{program.targetAudience || "성인"}</InfoValue>
                 </InfoRow>
                 <InfoRow>
                   <InfoLabel>수강료</InfoLabel>
@@ -298,11 +489,15 @@ const AdminProgramDetail = () => {
                 </InfoRow>
                 <InfoRow>
                   <InfoLabel>학습자준비물</InfoLabel>
-                  <InfoValue>{program.materials || '물감, 워터브러쉬, 수채화용지'}</InfoValue>
+                  <InfoValue>
+                    {program.materials || "물감, 워터브러쉬, 수채화용지"}
+                  </InfoValue>
                 </InfoRow>
                 <InfoRow>
                   <InfoLabel>교육기관 / 모집제한</InfoLabel>
-                  <InfoValue>{program.institution || `${dongName} / 대전광역시 유성구민`}</InfoValue>
+                  <InfoValue>
+                    {program.institution || `${dongName} / 대전광역시 유성구민`}
+                  </InfoValue>
                 </InfoRow>
               </tbody>
             </InfoTable>
@@ -334,7 +529,10 @@ const AdminProgramDetail = () => {
           </StatsSection>
 
           <ApplicationsHeader>
-            <ApplicationsTitle>전체 인원 ({totalCount}) <DetailButton>{selectedItems.size}명 선택</DetailButton></ApplicationsTitle>
+            <ApplicationsTitle>
+              전체 인원 ({totalCount}){" "}
+              <DetailButton>{selectedItems.size}명 선택</DetailButton>
+            </ApplicationsTitle>
             <ActionButtons>
               <PlainIconButton title="삭제" onClick={handleDeleteSelected}>
                 <DeleteIcon />
@@ -342,7 +540,7 @@ const AdminProgramDetail = () => {
               <SearchIconButton title="검색">
                 <SearchIcon />
               </SearchIconButton>
-              <TextButton>
+              <TextButton onClick={handleExcelDownload}>
                 <DownloadIcon />
                 엑셀 다운로드
               </TextButton>
@@ -352,55 +550,57 @@ const AdminProgramDetail = () => {
               </TextButton>
             </ActionButtons>
           </ApplicationsHeader>
-          
+
           <ApplicationsTable>
-              <thead>
-                <TableRow>
-                  <TableHeader>
-                    <Checkbox 
-                      type="checkbox" 
-                      checked={selectAll}
-                      onChange={(e) => handleSelectAll(e.target.checked)}
+            <thead>
+              <TableRow>
+                <TableHeader>
+                  <Checkbox
+                    type="checkbox"
+                    checked={selectAll}
+                    onChange={(e) => handleSelectAll(e.target.checked)}
+                  />
+                </TableHeader>
+                <TableHeader>No.</TableHeader>
+                <TableHeader>성명</TableHeader>
+                <TableHeader>ID</TableHeader>
+                <TableHeader>주소</TableHeader>
+                <TableHeader>연락처</TableHeader>
+                <TableHeader>이메일</TableHeader>
+                <TableHeader>생년월일</TableHeader>
+                <TableHeader>감면여부</TableHeader>
+                <TableHeader>신규/재수강</TableHeader>
+              </TableRow>
+            </thead>
+            <tbody>
+              {applications.map((app, index) => (
+                <TableRow key={app.id}>
+                  <TableCell>
+                    <Checkbox
+                      type="checkbox"
+                      checked={selectedItems.has(app.id)}
+                      onChange={(e) =>
+                        handleSelectItem(app.id, e.target.checked)
+                      }
                     />
-                  </TableHeader>
-                  <TableHeader>No.</TableHeader>
-                  <TableHeader>성명</TableHeader>
-                  <TableHeader>ID</TableHeader>
-                  <TableHeader>주소</TableHeader>
-                  <TableHeader>연락처</TableHeader>
-                  <TableHeader>이메일</TableHeader>
-                  <TableHeader>생년월일</TableHeader>
-                  <TableHeader>감면여부</TableHeader>
-                  <TableHeader>신규/재수강</TableHeader>
+                  </TableCell>
+                  <TableCell>{index + 1}</TableCell>
+                  <TableCell>{app.name}</TableCell>
+                  <TableCell>{app.userId}</TableCell>
+                  <TableCell>{app.address}</TableCell>
+                  <TableCell>{app.phone}</TableCell>
+                  <TableCell>{app.email}</TableCell>
+                  <TableCell>{app.birthDate}</TableCell>
+                  <TableCell>{app.discount}</TableCell>
+                  <TableCell>
+                    <CourseTypeBadge $type={app.courseType}>
+                      {app.courseType}
+                    </CourseTypeBadge>
+                  </TableCell>
                 </TableRow>
-              </thead>
-              <tbody>
-                {applications.map((app, index) => (
-                  <TableRow key={app.id}>
-                    <TableCell>
-                      <Checkbox 
-                        type="checkbox" 
-                        checked={selectedItems.has(app.id)}
-                        onChange={(e) => handleSelectItem(app.id, e.target.checked)}
-                      />
-                    </TableCell>
-                    <TableCell>{index + 1}</TableCell>
-                    <TableCell>{app.name}</TableCell>
-                    <TableCell>{app.userId}</TableCell>
-                    <TableCell>{app.address}</TableCell>
-                    <TableCell>{app.phone}</TableCell>
-                    <TableCell>{app.email}</TableCell>
-                    <TableCell>{app.birthDate}</TableCell>
-                    <TableCell>{app.discount}</TableCell>
-                    <TableCell>
-                      <CourseTypeBadge $type={app.courseType}>
-                        {app.courseType}
-                      </CourseTypeBadge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </tbody>
-            </ApplicationsTable>
+              ))}
+            </tbody>
+          </ApplicationsTable>
         </ApplicationsWrapper>
       )}
     </Container>
@@ -487,6 +687,68 @@ const StatusDate = styled.span`
   color: #333;
 `;
 
+const OptionButtonContainer = styled.div`
+  position: relative;
+`;
+
+const OptionButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: #f0f0f0;
+    border-radius: 4px;
+  }
+`;
+
+const OptionDropdown = styled.div`
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background-color: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 140px;
+  z-index: 1000;
+  overflow: hidden;
+`;
+
+const OptionMenuItem = styled.button`
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  background-color: #ffffff;
+  color: #333;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-family: "Pretendard", sans-serif;
+  border-bottom: 1px solid #f0f0f0;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background-color: #f5f5f5;
+  }
+
+  &:active {
+    background-color: #e8e8e8;
+  }
+`;
+
 const MenuButton = styled.button`
   background: none;
   border: none;
@@ -494,7 +756,7 @@ const MenuButton = styled.button`
   cursor: pointer;
   color: #666;
   padding: 4px 8px;
-  
+
   &:hover {
     background-color: #f0f0f0;
     border-radius: 4px;
@@ -538,7 +800,7 @@ const ContentWrapper = styled.div`
   display: grid;
   grid-template-columns: 400px 1fr;
   gap: 40px;
-  
+
   @media (max-width: 968px) {
     grid-template-columns: 1fr;
   }
@@ -620,7 +882,7 @@ const AttachmentLink = styled.a`
   color: #1976d2;
   text-decoration: underline;
   cursor: pointer;
-  
+
   &:hover {
     color: #1565c0;
   }
@@ -690,8 +952,6 @@ const ApplicationsTitle = styled.h2`
   color: #111;
 `;
 
-
-
 const ApplicationsTable = styled.table`
   width: 100%;
   border-collapse: collapse;
@@ -703,11 +963,11 @@ const ApplicationsTable = styled.table`
 
 const TableRow = styled.tr`
   border-bottom: 1px solid #e6e6e6;
-  
+
   &:hover {
     background-color: #f9f9f9;
   }
-  
+
   &:last-child {
     border-bottom: none;
   }
@@ -735,12 +995,13 @@ const TableCell = styled.td`
 const StatusBadge = styled.span`
   display: inline-block;
   padding: 4px 8px;
-  background: ${props => props.$status === '승인' ? "#37B7EC" : "#ECECEC"};
-  color: ${props => props.$status === '승인' ? "#fff" : "#9D9D9C"};
+  background: ${(props) => (props.$status === "승인" ? "#37B7EC" : "#ECECEC")};
+  color: ${(props) => (props.$status === "승인" ? "#fff" : "#9D9D9C")};
   font-size: 12px;
   font-weight: 600;
   border-radius: 16px;
-  border: 0.5px solid ${props => props.$status === '승인' ? "#37B7EC" : "#fff"};
+  border: 0.5px solid
+    ${(props) => (props.$status === "승인" ? "#37B7EC" : "#fff")};
   white-space: nowrap;
   width: fit-content;
   font-family: "Pretendard", sans-serif;
@@ -777,8 +1038,9 @@ const CourseTypeBadge = styled.span`
   border-radius: 12px;
   font-size: 12px;
   font-weight: 600;
-  background-color: ${props => props.$type === '신규' ? '#e3f2fd' : '#fff3e0'};
-  color: ${props => props.$type === '신규' ? '#1976d2' : '#f57c00'};
+  background-color: ${(props) =>
+    props.$type === "신규" ? "#e3f2fd" : "#fff3e0"};
+  color: ${(props) => (props.$type === "신규" ? "#1976d2" : "#f57c00")};
 `;
 
 const StatsSection = styled.div`
@@ -841,11 +1103,11 @@ const IconButton = styled.button`
   border-radius: 4px;
   cursor: pointer;
   transition: background 0.2s ease;
-  
+
   &:hover {
     background: #f5f5f5;
   }
-  
+
   svg {
     width: 16px;
     height: 16px;
@@ -862,11 +1124,11 @@ const PlainIconButton = styled.button`
   background: none;
   cursor: pointer;
   transition: opacity 0.2s ease;
-  
+
   &:hover {
     opacity: 0.7;
   }
-  
+
   svg {
     width: 16px;
     height: 16px;
@@ -883,11 +1145,11 @@ const SearchIconButton = styled.button`
   background: none;
   cursor: pointer;
   transition: opacity 0.2s ease;
-  
+
   &:hover {
     opacity: 0.7;
   }
-  
+
   svg {
     width: 20px;
     height: 20px;
@@ -909,15 +1171,13 @@ const TextButton = styled.button`
   cursor: pointer;
   font-family: "Pretendard", sans-serif;
   transition: background 0.2s ease;
-  
+
   &:hover {
     background: #f5f5f5;
   }
-  
+
   svg {
     width: 14px;
     height: 14px;
   }
 `;
-
-
