@@ -1,29 +1,29 @@
 // src/page/adminDong/programSuccess.js
 
-import { useNavigate, useParams } from 'react-router-dom';
-import styled from 'styled-components';
+import { useNavigate, useParams } from "react-router-dom";
+import styled from "styled-components";
 
 const ProgramSuccessPage = () => {
-    const navigate = useNavigate();
-    const { dongName } = useParams();
+  const navigate = useNavigate();
+  const { dongName } = useParams();
 
-    const handleGoBack = () => {
-        navigate(`/admin/dong/${dongName}`);
-    };
+  const handleGoBack = () => {
+    navigate(`/admin/dong/${dongName}`);
+  };
 
-    return (
-        <PageContainer>
-            <Header>
-                <BackButton onClick={handleGoBack}>←</BackButton>
-                <HeaderTitle>프로그램 생성</HeaderTitle>
-            </Header>
-            
-            <ContentWrapper>
-                <SuccessMessage>프로그램 생성이 완료되었습니다</SuccessMessage>
-                <ConfirmButton onClick={handleGoBack}>확인하기</ConfirmButton>
-            </ContentWrapper>
-        </PageContainer>
-    );
+  return (
+    <PageContainer>
+      <Header>
+        <BackButton onClick={handleGoBack}>←</BackButton>
+        <HeaderTitle>프로그램 생성</HeaderTitle>
+      </Header>
+
+      <ContentWrapper>
+        <SuccessMessage>프로그램 생성이 완료되었습니다</SuccessMessage>
+        <ConfirmButton onClick={handleGoBack}>확인하기</ConfirmButton>
+      </ContentWrapper>
+    </PageContainer>
+  );
 };
 
 export default ProgramSuccessPage;
@@ -35,34 +35,35 @@ const PageContainer = styled.div`
   background-color: #fff;
 `;
 
-const Header = styled.div`
+const Header = styled.header`
   display: flex;
   align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid #e0e0e0;
+  padding: 16px 24px;
+  border-bottom: 1px solid #d2d6db;
   gap: 16px;
 `;
 
 const BackButton = styled.button`
   background: none;
   border: none;
-  font-size: 24px;
   cursor: pointer;
-  color: #333;
   padding: 0;
   display: flex;
   align-items: center;
-  
-  &:hover {
-    color: #000;
+  justify-content: center;
+
+  svg {
+    width: 24px;
+    height: 24px;
   }
 `;
 
 const HeaderTitle = styled.h1`
-  font-size: 20px;
-  font-weight: 600;
-  color: #333;
+  font-size: 24px;
+  font-weight: 700;
+  color: #111;
   margin: 0;
+  font-family: "Pretendard", sans-serif;
 `;
 
 const ContentWrapper = styled.div`
@@ -72,61 +73,31 @@ const ContentWrapper = styled.div`
   justify-content: center;
   flex: 1;
   padding: 80px 24px;
-  gap: 32px;
+  gap: 40px;
 `;
 
 const SuccessMessage = styled.h2`
-  font-size: 24px;
+  font-size: 32px;
   font-weight: 600;
   color: #111;
   text-align: center;
-`;
-
-const UrlBox = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 20px;
-  border: 1px solid #d0d0d0;
-  border-radius: 8px;
-  background-color: #f9f9f9;
-  max-width: 500px;
-  width: 100%;
-`;
-
-const UrlText = styled.span`
-  flex: 1;
-  font-size: 14px;
-  color: #666;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-`;
-
-const CopyButton = styled.button`
-  background: none;
-  border: none;
-  font-size: 20px;
-  cursor: pointer;
-  padding: 4px;
-  
-  &:hover {
-    opacity: 0.7;
-  }
+  line-height: 45px;
+  font-family: "Pretendard", sans-serif;
 `;
 
 const ConfirmButton = styled.button`
-  padding: 14px 48px;
-  font-size: 16px;
-  font-weight: 600;
+  padding: 13px 72px;
+  background: #1557b7;
   color: white;
-  background-color: #1976d2;
   border: none;
-  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s;
-  
+  border-radius: 2px;
+  transition: background 0.2s;
+  font-family: "Pretendard", sans-serif;
+
   &:hover {
-    background-color: #1565c0;
+    background: #154ba3;
   }
 `;

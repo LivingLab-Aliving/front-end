@@ -1,31 +1,58 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
+import axios from "axios";
 import { ReactComponent as ArrowLeft } from "../../assets/icon/arrow_left.svg";
 import UnknownImage from "../../assets/unknown_image.svg";
-import { PROGRAMS_BY_DONG, PAYMENT_GUIDE, ETC_GUIDE } from "../../assets/data/data";
+import {
+  PROGRAMS_BY_DONG,
+  PAYMENT_GUIDE,
+  ETC_GUIDE,
+} from "../../assets/data/data";
 import { formatPeriod, calculateDaysRemaining } from "../../util/utils";
 
 const ProgramDetail = () => {
   const { dongName, programId } = useParams();
   const navigate = useNavigate();
+  
+  // 1. 상태 관리 추가
+  const [program, setProgram] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [applicantCount, setApplicantCount] = useState(0);
 
-  const program = useMemo(() => {
-    const dongPrograms = PROGRAMS_BY_DONG[dongName] || [];
-    return dongPrograms.find((p) => p.id === programId);
-  }, [dongName, programId]);
+  // 2. 백엔드 데이터 불러오기
+  useEffect(() => {
+    const fetchProgramDetail = async () => {
+      try {
+        setLoading(true);
+        const userId = localStorage.getItem("userId");
+        const response = await axios.get(`http://localhost:8080/api/program/${programId}`, {
+          params: { userId }
+        });
 
-  if (!program) {
-    return (
-      <Container>
-        <ErrorTitle>프로그램을 찾을 수 없습니다.</ErrorTitle>
-        <BackButton onClick={() => navigate(-1)}>돌아가기</BackButton>
-      </Container>
-    );
-  }
+        console.log(response.data.data);
+        
+        setProgram(response.data.data);
 
-  const badgeInfo = calculateDaysRemaining(program.startDate, program.endDate);
+        const countRes = await axios.get(`http://localhost:8080/api/program/${programId}/applicants/count`);
+        setApplicantCount(countRes.data.data);
+      } catch (error) {
+        console.error("상세 정보를 불러오는데 실패했습니다.", error);
+        alert("존재하지 않거나 삭제된 프로그램입니다.");
+        navigate(-1);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (programId) fetchProgramDetail();
+  }, [programId, navigate]);
+
+  if (loading) return <Container>로딩 중...</Container>;
+  if (!program) return <Container><ErrorTitle>프로그램을 찾을 수 없습니다.</ErrorTitle></Container>;
+
+  const badgeInfo = calculateDaysRemaining(program.recruitStartDate, program.recruitEndDate);
 
   return (
     <Container>
@@ -41,18 +68,16 @@ const ProgramDetail = () => {
       <ContentSection>
         <ProgramHeader>
           <StatusBadge $type={badgeInfo.type}>
-            {badgeInfo.type === "days"
-              ? `D-${badgeInfo.value}`
-              : badgeInfo.type === "closed"
+            {program.applicantCount >= program.capacity 
               ? "모집마감"
-              : ""}
+              : badgeInfo.type === "days" ? `D-${badgeInfo.value}` : "모집중"}
           </StatusBadge>
-          <ProgramName>{program.title}</ProgramName>
+          <ProgramName>{program.programName}</ProgramName>
         </ProgramHeader>
 
         <InfoGrid>
           <PosterWrapper>
-            <Poster src={UnknownImage} alt="프로그램 포스터" />
+            <Poster src={program.thumbnailUrl || UnknownImage} alt="프로그램 포스터" />
           </PosterWrapper>
 
           <InfoTableWrapper>
@@ -60,30 +85,38 @@ const ProgramDetail = () => {
               <tbody>
                 <TableRow>
                   <TableHeader>교육일정</TableHeader>
-                  <TableData>{program.schedule}</TableData>
+                  <TableData>{program.eduTime}</TableData>
                 </TableRow>
                 <TableRow>
                   <TableHeader>분기</TableHeader>
-                  <TableData>{program.quarter || "-"}</TableData>
+                    <TableData>{program.quarter ? `${program.quarter}분기` : "-"}</TableData>
                 </TableRow>
                 <TableRow>
                   <TableHeader>교육기간</TableHeader>
                   <TableData>
-                    {formatPeriod(program.startDate, program.endDate)}
+                    {formatPeriod(program.eduStartDate, program.eduEndDate)}
                   </TableData>
                 </TableRow>
                 <TableRow>
                   <TableHeader>모집기간</TableHeader>
-                  <TableData>{program.applicationPeriod || "-"}</TableData>
+                  <TableData>{formatPeriod(program.recruitStartDate, program.recruitEndDate)}</TableData>
                 </TableRow>
                 <TableRow>
                   <TableHeader>교육장소</TableHeader>
-                  <TableData>{program.place}</TableData>
+                  <TableData>{program.eduPlace}</TableData>
                 </TableRow>
                 <TableRow>
                   <TableHeader>신청인원 / 모집인원</TableHeader>
                   <TableData>
-                    {program.capacity || program.recruitment}
+                      {applicantCount} 명
+                    {" / "} 
+                    {program.capacity} 명
+
+                    {applicantCount >= program.capacity && (
+                      <span style={{ color: "#ff4d4f", marginLeft: "10px", fontWeight: "600" }}>
+                        [정원 마감]
+                      </span>
+                    )}
                   </TableData>
                 </TableRow>
                 <TableRow>
@@ -92,11 +125,11 @@ const ProgramDetail = () => {
                 </TableRow>
                 <TableRow>
                   <TableHeader>수강료</TableHeader>
-                  <TableData>{program.tuition}</TableData>
+                    <TableData>{program.eduPrice === 0 ? "무료" : `${program.eduPrice.toLocaleString()}원`}</TableData>
                 </TableRow>
                 <TableRow>
                   <TableHeader>학습준비물</TableHeader>
-                  <TableData>{program.materials || "-"}</TableData>
+                  <TableData>{program.needs || "-"}</TableData>
                 </TableRow>
                 <TableRow>
                   <TableHeader>교육기관 / 모집제한</TableHeader>
@@ -108,13 +141,37 @@ const ProgramDetail = () => {
         </InfoGrid>
 
         <ButtonWrapper>
-          <ApplyButton onClick={() => setShowModal(true)}>신청하기</ApplyButton>
+          {program.applied ? (
+            <ApplyButton 
+              style={{ background: "#878786", cursor: "default" }} 
+              disabled
+            >
+              이미 신청한 프로그램입니다
+            </ApplyButton>
+          ) : program.applicantCount >= program.capacity ? (
+            <ApplyButton 
+              style={{ background: "#ECECEC", color: "#9D9D9C", cursor: "not-allowed" }}
+              disabled
+            >
+              정원이 마감되었습니다
+            </ApplyButton>
+          ) : (
+          <ApplyButton
+              onClick={() => navigate(`/dong/${dongName}/program/${programId}/apply`)}
+          >
+            신청하기
+          </ApplyButton>
+          )}
         </ButtonWrapper>
       </ContentSection>
 
       <Section>
         <SectionTitle>• 프로그램 소개</SectionTitle>
         <SectionContent>
+          <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6', color: '#333', marginBottom: '24px' }}>
+            {program.description || "등록된 프로그램 소개 내용이 없습니다."}
+          </div>
+
           {program.instructor && (
             <InstructorCard>
               <InstructorImage
@@ -137,17 +194,14 @@ const ProgramDetail = () => {
                   <DetailValue>| {program.instructor.experience}</DetailValue>
                 </InstructorDetailRow>
               </InstructorInfo>
-              <MoreLink href="#">
-                이 강사의 다른 프로그램 보러가기 &gt;
-              </MoreLink>
             </InstructorCard>
           )}
 
-          {program.attachment && (
+          {program.classPlanUrl && (
             <AttachmentBox>
               <span>첨부파일 | </span>
-              <DownloadLink href={program.attachment.url} download>
-                {program.attachment.name}
+              <DownloadLink href={program.classPlanUrl} target="_blank" download>
+                {program.classPlanOriginalName || "첨부파일 다운로드"}
               </DownloadLink>
             </AttachmentBox>
           )}
@@ -159,8 +213,8 @@ const ProgramDetail = () => {
       <Section>
         <SectionTitle>• 수강료 납부 안내</SectionTitle>
         <GuideList>
-          {program.paymentGuide
-            ? program.paymentGuide.map((line, index) => (
+          {program.info 
+            ? program.info.split('\n').filter(line => line.trim() !== '').map((line, index) => (
                 <GuideItem key={index}>
                   <Star>★</Star>
                   <Text>{line}</Text>
@@ -171,15 +225,16 @@ const ProgramDetail = () => {
                   <Star>★</Star>
                   <Text>{line}</Text>
                 </GuideItem>
-              ))}
+              ))
+          }
         </GuideList>
       </Section>
 
       <Section>
         <SectionTitle>• 기타내용</SectionTitle>
         <GuideList>
-          {program.etcGuide
-            ? program.etcGuide.map((line, index) => (
+          {program.etc 
+            ? program.etc.split('\n').filter(line => line.trim() !== '').map((line, index) => (
                 <GuideItem key={index} $plain>
                   {line}
                 </GuideItem>
@@ -188,7 +243,8 @@ const ProgramDetail = () => {
                 <GuideItem key={index} $plain>
                   {line}
                 </GuideItem>
-              ))}
+              ))
+          }
         </GuideList>
       </Section>
 
@@ -282,10 +338,10 @@ const ProgramHeader = styled.div`
 
 const StatusBadge = styled.span`
   display: inline-block;
-  padding: 8px 20px;
-  background: ${({ $type }) => ($type === "closed" ? "#ECECEC" : "#E5F7FF")};
-  color: ${({ $type }) => ($type === "closed" ? "#9D9D9C" : "#006B97")};
-  font-weight: 700;
+  padding: 8px 14px;
+  background: ${({ $type }) => ($type === "closed" ? "#ECECEC" : "#37B7EC")};
+  color: ${({ $type }) => ($type === "closed" ? "#9D9D9C" : "#ffffff")};
+  font-weight: 500;
   font-size: 16px;
   border-radius: 50px;
   line-height: 1.2;
@@ -331,24 +387,32 @@ const InfoTableWrapper = styled.div`
 
 const InfoTable = styled.table`
   width: 100%;
-  border-top: 1px solid #ddd;
+  border-top: 1px solid #d2d6db;
+  border-bottom: 1px solid #d2d6db;
   border-collapse: collapse;
+  border-radius: 0;
 `;
 
 const TableRow = styled.tr`
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #d2d6db;
+  background: #f5f6f9;
+
+  &:last-child {
+    border-bottom: none;
+  }
 `;
 
 const TableHeader = styled.th`
   padding: 16px 24px;
   text-align: center;
-  background: #f5f6f9;
+  background: transparent;
   color: #333;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 14px;
-  width: 140px;
+  width: 200px;
   vertical-align: middle;
   white-space: nowrap;
+  border-right: 1px solid #d2d6db;
 `;
 
 const TableData = styled.td`
@@ -356,6 +420,7 @@ const TableData = styled.td`
   color: #333;
   font-size: 14px;
   line-height: 1.5;
+  background: #fff;
 `;
 
 const ButtonWrapper = styled.div`
@@ -365,7 +430,7 @@ const ButtonWrapper = styled.div`
 `;
 
 const ApplyButton = styled.button`
-  padding: 13px 60px;
+  padding: 13px 72px;
   background: #1557b7;
   color: white;
   border: none;
